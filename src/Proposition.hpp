@@ -15,18 +15,18 @@ public:
 
 class Variable : public Proposition {
 public:
-    explicit Variable(const std::string& name = "") : name(name) {}
+    explicit Variable(int id) : id(id) {}
 
     virtual Type getType() const {
         return VARIABLE;
     }
 
-    std::string getName() const {
-        return name;
+    int getId() const {
+        return id;
     }
 
 private:
-    std::string name;
+    int id;
 };
 
 class Constant : public Proposition {

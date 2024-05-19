@@ -18,7 +18,7 @@ public:
 		                  char whitespace = ' ');
 
 	std::shared_ptr<Proposition> fromString(const std::string& str);
-	std::string toString(std::shared_ptr<Proposition> proposition);
+	std::string toString(std::shared_ptr<Proposition> proposition, bool parenthesis = false);
 
 private:
 	std::vector<std::string> variables;
@@ -33,11 +33,14 @@ private:
 	struct Token {
 		enum Type {OPEN_PAR, CLOSE_PAR, VARIABLE, CONSTANT, UNARY, BINARY};
 		Type type;
-		int index;
+		int value;
 
-		Token() {}
-		Token(Type type, int index = 0) : type(type), index(index) {}
+		Token() : value(-1) {}
+		Token(Type type, int value = 0) : type(type), value(value) {}
 
 	};
 	std::vector<std::pair<std::string, Token>> stringToTokenMap;
+
+	bool pairParentheses(std::vector<Token>& tokens);
+	std::shared_ptr<Proposition> fromTokens(std::vector<Token>::iterator begin, std::vector<Token>::iterator end);
 };
