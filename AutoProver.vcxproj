@@ -127,7 +127,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\common.hpp" />
     <ClInclude Include="src\Converter.hpp" />
     <ClInclude Include="src\Proposition.hpp" />
   </ItemGroup>

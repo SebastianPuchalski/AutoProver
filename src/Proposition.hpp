@@ -1,7 +1,5 @@
 #pragma once
 
-#include "common.hpp"	
-
 #include <string>
 #include <memory>
 
@@ -23,6 +21,10 @@ public:
 
     int getId() const {
         return id;
+    }
+
+    void setId(int id) {
+        this->id = id;
     }
 
 private:

@@ -59,6 +59,15 @@ Converter::Converter() {
 	binaryOperators.push_back(std::pair<std::string, BinaryOperator::Op>("->", BinaryOperator::IMP));
 
 	setSymbolStrings(variables, unaryOperators, binaryOperators);
+
+	const int BINARY_OP_COUNT = 16;
+	int level = 0;
+	std::vector<int> binaryOpPrecedenceLevels(BINARY_OP_COUNT, level);
+	binaryOpPrecedenceLevels[BinaryOperator::XNOR] = ++level;
+	binaryOpPrecedenceLevels[BinaryOperator::IMP] = ++level;
+	binaryOpPrecedenceLevels[BinaryOperator::OR] = ++level;
+	binaryOpPrecedenceLevels[BinaryOperator::AND] = ++level;
+	setBinaryOpPrecedenceLevels(binaryOpPrecedenceLevels);
 }
 
 void Converter::setSymbolStrings(const std::vector<std::string>& variables,
@@ -77,8 +86,8 @@ void Converter::setSymbolStrings(const std::vector<std::string>& variables,
 	this->closingParenthesis = closingParenthesis;
 	this->whitespace = whitespace;
 
-	stringToTokenMap.push_back(std::pair<std::string, Token>(openingParenthesis, Token(Token::OPEN_PAR)));
-	stringToTokenMap.push_back(std::pair<std::string, Token>(closingParenthesis, Token(Token::CLOSE_PAR)));
+	stringToTokenMap.push_back(std::pair<std::string, Token>(openingParenthesis, Token(Token::OPEN_PAR, 0)));
+	stringToTokenMap.push_back(std::pair<std::string, Token>(closingParenthesis, Token(Token::CLOSE_PAR, 0)));
 
 	for(int i = 0; i < variables.size(); i++) {
 		Token token(Token::VARIABLE, i);
@@ -99,14 +108,18 @@ void Converter::setSymbolStrings(const std::vector<std::string>& variables,
 	}
 }
 
+void Converter::setBinaryOpPrecedenceLevels(const std::vector<int>& precedenceLevels) {
+	assert(precedenceLevels.size() == 16);
+	binaryOpPrecedenceLevels = precedenceLevels;
+}
+
 std::shared_ptr<Proposition> Converter::fromString(const std::string& str) {
 	std::vector<Token> tokens;
 	int error = stringToTokens(tokens, str, stringToTokenMap, whitespace);
 	if (error) 
 		return std::shared_ptr<Proposition>();
 
-	bool result = pairParentheses(tokens);
-	if(result == false)
+	if(!pairParentheses(tokens))
 		return std::shared_ptr<Proposition>();
 
 	return fromTokens(tokens.begin(), tokens.end());
@@ -117,6 +130,7 @@ std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool p
 
 	if (type == Proposition::VARIABLE) {
 		std::shared_ptr<Variable> variable = std::static_pointer_cast<Variable>(proposition);
+		assert(variable->getId() < variables.size());
 		return variables[variable->getId()];
 	}
 
@@ -139,6 +153,7 @@ std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool p
 				return pair.first + toString(unaryOp->getOperand(), true);
 			}
 		}
+		assert(!"Cannot find unary operator");
 	}
 
 	if (type == Proposition::BINARY) {
@@ -153,7 +168,11 @@ std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool p
 				return result;
 			}
 		}
+		assert(!"Cannot find binary operator");
 	}
+
+	assert(!"Error during printing");
+	return std::string();
 }
 
 bool Converter::pairParentheses(std::vector<Token>& tokens) {
@@ -199,28 +218,41 @@ std::shared_ptr<Proposition> Converter::fromTokens(std::vector<Token>::iterator 
 
 	std::vector<Token>::iterator unary = end;
 	std::vector<Token>::iterator binary = end;
+	int binaryBestLevel = INT_MAX;
 	for (std::vector<Token>::iterator it = begin; it < end; it++) {
 		if ((*it).type == Token::OPEN_PAR) {
+			assert((*(it + (*it).value)).type == Token::CLOSE_PAR);
+			assert((*(it + (*it).value)).value == -(*it).value);
 			it += (*it).value;
 			continue;
 		}
-		if ((*it).type == Token::UNARY)
+		if ((*it).type == Token::UNARY && unary == end) {
 			unary = it;
-		if ((*it).type == Token::BINARY) // the last binary op will be on top
-			binary = it;
+		}
+		if ((*it).type == Token::BINARY) {
+			assert((*it).value < binaryOpPrecedenceLevels.size());
+			int level = binaryOpPrecedenceLevels[(*it).value];
+			if (level <= binaryBestLevel) {
+				binaryBestLevel = level;
+				binary = it;
+			}
+		}
 	}
 
-	if (binary != end) { // binary op has higher priority than unary
+	if (binary != end) {
 		std::shared_ptr<Proposition> left = fromTokens(begin, binary);
 		std::shared_ptr<Proposition> right = fromTokens(binary + 1, end);
-		return std::make_shared<BinaryOperator>(left, (BinaryOperator::Op)(*binary).value, right);
+		if(left && right)
+			return std::make_shared<BinaryOperator>(left, (BinaryOperator::Op)(*binary).value, right);
+		return std::shared_ptr<Proposition>();
 	}
-
 	if (unary != end) {
-		if(unary != begin)
-			return std::shared_ptr<Proposition>();
-		std::shared_ptr<Proposition> operand = fromTokens(unary + 1, end);
-		return std::make_shared<UnaryOperator>(operand, (UnaryOperator::Op)(*unary).value);
+		if (unary == begin) {
+			std::shared_ptr<Proposition> operand = fromTokens(unary + 1, end);
+			if (operand)
+				return std::make_shared<UnaryOperator>(operand, (UnaryOperator::Op)(*unary).value);
+		}
+		return std::shared_ptr<Proposition>();
 	}
 
 	return std::shared_ptr<Proposition>();
