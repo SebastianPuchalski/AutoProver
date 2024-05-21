@@ -10,13 +10,13 @@ public:
 	Converter();
 	virtual ~Converter() = default;
 
-	void getStringsForVariables(std::vector<std::string>& variables);
+	void getStringsForVariables(std::vector<std::string>& variables) const;
 	void getStringsForOperators(std::vector<std::pair<std::string, UnaryOperator::Op>>& unaryOperators,
-		                        std::vector<std::pair<std::string, BinaryOperator::Op>>& binaryOperators);
+		                        std::vector<std::pair<std::string, BinaryOperator::Op>>& binaryOperators) const;
 	void getStringsForSymbols(std::string& trueConstant, std::string& falseConstant,
 		                      std::string& openingParenthesis, std::string& closingParenthesis,
-		                      char& whitespace);
-	void getBinaryOpPrecedenceLevels(std::vector<int>& precedenceLevels);
+		                      char& whitespace) const;
+	void getBinaryOpPrecedenceLevels(std::vector<int>& precedenceLevels) const;
 
 	void setStringsForVariables(const std::vector<std::string>& variables);
 	void setStringsForOperators(const std::vector<std::pair<std::string, UnaryOperator::Op>>& unaryOperators,

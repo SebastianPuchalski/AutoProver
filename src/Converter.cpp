@@ -66,19 +66,19 @@ Converter::Converter() {
 	binaryOpPrecedenceLevels[BinaryOperator::AND] = ++level;
 }
 
-void Converter::getStringsForVariables(std::vector<std::string>& variables) {
+void Converter::getStringsForVariables(std::vector<std::string>& variables) const {
 	variables = this->variables;
 }
 
 void Converter::getStringsForOperators(std::vector<std::pair<std::string, UnaryOperator::Op>>& unaryOperators,
-	                                   std::vector<std::pair<std::string, BinaryOperator::Op>>& binaryOperators) {
+	                                   std::vector<std::pair<std::string, BinaryOperator::Op>>& binaryOperators) const {
 	unaryOperators = this->unaryOperators;
 	binaryOperators = this->binaryOperators;
 }
 
 void Converter::getStringsForSymbols(std::string& trueConstant, std::string& falseConstant,
 	                                 std::string& openingParenthesis, std::string& closingParenthesis,
-	                                 char& whitespace) {
+	                                 char& whitespace) const {
 	trueConstant = this->trueConstant;
 	falseConstant = this->falseConstant;
 	openingParenthesis = this->openingParenthesis;
@@ -86,7 +86,7 @@ void Converter::getStringsForSymbols(std::string& trueConstant, std::string& fal
 	whitespace = this->whitespace;
 }
 
-void Converter::getBinaryOpPrecedenceLevels(std::vector<int>& precedenceLevels) {
+void Converter::getBinaryOpPrecedenceLevels(std::vector<int>& precedenceLevels) const {
 	precedenceLevels = binaryOpPrecedenceLevels;
 }
 

@@ -128,11 +128,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\Converter.hpp" />
+    <ClInclude Include="src\ModelChecker.hpp" />
     <ClInclude Include="src\Proposition.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Converter.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\ModelChecker.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
