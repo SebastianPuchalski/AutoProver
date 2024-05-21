@@ -45,76 +45,91 @@ int stringToTokens(std::vector<T>& result, std::string str,
 }
 
 Converter::Converter() {
-	std::vector<std::string> variables;
-	for (char c = 'a'; c <= 'z'; c++)
+	for (char c = 'a'; c <= 'z'; c++) {
 		variables.push_back(std::string(1, c));
+	}
 
-	std::vector<std::pair<std::string, UnaryOperator::Op>> unaryOperators;
 	unaryOperators.push_back(std::pair<std::string, UnaryOperator::Op>("~", UnaryOperator::NOT));
-
-	std::vector<std::pair<std::string, BinaryOperator::Op>> binaryOperators;
 	binaryOperators.push_back(std::pair<std::string, BinaryOperator::Op>("&", BinaryOperator::AND));
 	binaryOperators.push_back(std::pair<std::string, BinaryOperator::Op>("|", BinaryOperator::OR));
 	binaryOperators.push_back(std::pair<std::string, BinaryOperator::Op>("<->", BinaryOperator::XNOR));
 	binaryOperators.push_back(std::pair<std::string, BinaryOperator::Op>("->", BinaryOperator::IMP));
 
-	setSymbolStrings(variables, unaryOperators, binaryOperators);
+	setStringsForSymbols();
 
 	const int BINARY_OP_COUNT = 16;
 	int level = 0;
-	std::vector<int> binaryOpPrecedenceLevels(BINARY_OP_COUNT, level);
+	binaryOpPrecedenceLevels = std::vector<int>(BINARY_OP_COUNT, level);
 	binaryOpPrecedenceLevels[BinaryOperator::XNOR] = ++level;
 	binaryOpPrecedenceLevels[BinaryOperator::IMP] = ++level;
 	binaryOpPrecedenceLevels[BinaryOperator::OR] = ++level;
 	binaryOpPrecedenceLevels[BinaryOperator::AND] = ++level;
-	setBinaryOpPrecedenceLevels(binaryOpPrecedenceLevels);
 }
 
-void Converter::setSymbolStrings(const std::vector<std::string>& variables,
-	const std::vector<std::pair<std::string, UnaryOperator::Op>>& unaryOperators,
-	const std::vector<std::pair<std::string, BinaryOperator::Op>>& binaryOperators,
-	const std::string& trueConstant, const std::string& falseConstant,
-	const std::string& openingParenthesis, const std::string& closingParenthesis,
-	char whitespace) {
+void Converter::getStringsForVariables(std::vector<std::string>& variables) {
+	variables = this->variables;
+}
 
+void Converter::getStringsForOperators(std::vector<std::pair<std::string, UnaryOperator::Op>>& unaryOperators,
+	                                   std::vector<std::pair<std::string, BinaryOperator::Op>>& binaryOperators) {
+	unaryOperators = this->unaryOperators;
+	binaryOperators = this->binaryOperators;
+}
+
+void Converter::getStringsForSymbols(std::string& trueConstant, std::string& falseConstant,
+	                                 std::string& openingParenthesis, std::string& closingParenthesis,
+	                                 char& whitespace) {
+	trueConstant = this->trueConstant;
+	falseConstant = this->falseConstant;
+	openingParenthesis = this->openingParenthesis;
+	closingParenthesis = this->closingParenthesis;
+	whitespace = this->whitespace;
+}
+
+void Converter::getBinaryOpPrecedenceLevels(std::vector<int>& precedenceLevels) {
+	precedenceLevels = binaryOpPrecedenceLevels;
+}
+
+void Converter::setStringsForVariables(const std::vector<std::string>& variables) {
+	for (auto item : variables) assert(!item.empty());
 	this->variables = variables;
+	stringToTokenMap.clear();
+}
+
+void Converter::setStringsForOperators(const std::vector<std::pair<std::string, UnaryOperator::Op>>& unaryOperators,
+	                                   const std::vector<std::pair<std::string, BinaryOperator::Op>>& binaryOperators) {
+	for (auto item : unaryOperators)
+		assert(!item.first.empty() && item.second >= UnaryOperator::FALSE && item.second <= UnaryOperator::TRUE);
+	for (auto item : binaryOperators)
+		assert(!item.first.empty() && item.second >= BinaryOperator::FALSE && item.second <= BinaryOperator::TRUE);
 	this->unaryOperators = unaryOperators;
 	this->binaryOperators = binaryOperators;
+	stringToTokenMap.clear();
+}
+
+void Converter::setStringsForSymbols(const std::string& trueConstant, const std::string& falseConstant,
+									 const std::string& openingParenthesis, const std::string& closingParenthesis,
+									 char whitespace) {
 	this->trueConstant = trueConstant;
 	this->falseConstant = falseConstant;
 	this->openingParenthesis = openingParenthesis;
 	this->closingParenthesis = closingParenthesis;
 	this->whitespace = whitespace;
-
-	stringToTokenMap.push_back(std::pair<std::string, Token>(openingParenthesis, Token(Token::OPEN_PAR, 0)));
-	stringToTokenMap.push_back(std::pair<std::string, Token>(closingParenthesis, Token(Token::CLOSE_PAR, 0)));
-
-	for(int i = 0; i < variables.size(); i++) {
-		Token token(Token::VARIABLE, i);
-		stringToTokenMap.push_back(std::pair<std::string, Token>(variables[i], token));
-	}
-
-	stringToTokenMap.push_back(std::pair<std::string, Token>(falseConstant, Token(Token::CONSTANT, Constant::Value::FALSE)));
-	stringToTokenMap.push_back(std::pair<std::string, Token>(trueConstant, Token(Token::CONSTANT, Constant::Value::TRUE)));
-
-	for (int i = 0; i < unaryOperators.size(); i++) {
-		Token token(Token::UNARY, unaryOperators[i].second);
-		stringToTokenMap.push_back(std::pair<std::string, Token>(unaryOperators[i].first, token));
-	}
-
-	for (int i = 0; i < binaryOperators.size(); i++) {
-		Token token(Token::BINARY, binaryOperators[i].second);
-		stringToTokenMap.push_back(std::pair<std::string, Token>(binaryOperators[i].first, token));
-	}
+	stringToTokenMap.clear();
 }
 
 void Converter::setBinaryOpPrecedenceLevels(const std::vector<int>& precedenceLevels) {
-	assert(precedenceLevels.size() == 16);
+	const int BINARY_OP_COUNT = 16;
+	assert(precedenceLevels.size() == BINARY_OP_COUNT);
 	binaryOpPrecedenceLevels = precedenceLevels;
 }
 
 std::shared_ptr<Proposition> Converter::fromString(const std::string& str) {
+	if(stringToTokenMap.empty())
+		prepareStringToTokenMap();
+
 	std::vector<Token> tokens;
+
 	int error = stringToTokens(tokens, str, stringToTokenMap, whitespace);
 	if (error) 
 		return std::shared_ptr<Proposition>();
@@ -125,24 +140,29 @@ std::shared_ptr<Proposition> Converter::fromString(const std::string& str) {
 	return fromTokens(tokens.begin(), tokens.end());
 }
 
-std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool parenthesis) {
+std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool addParenthesis) {
 	Proposition::Type type = proposition->getType();
 
 	if (type == Proposition::VARIABLE) {
 		std::shared_ptr<Variable> variable = std::static_pointer_cast<Variable>(proposition);
-		assert(variable->getId() < variables.size());
-		return variables[variable->getId()];
+		if(variable->getId() < variables.size())
+			return variables[variable->getId()];
+		assert(!"Cannot find variable");
+		return std::string(" VARIABLE_ERROR ");
 	}
 
 	if (type == Proposition::CONSTANT) {
 		std::shared_ptr<Constant> constant = std::static_pointer_cast<Constant>(proposition);
 		switch (constant->getValue()) {
 		case Constant::FALSE:
+			assert(!falseConstant.empty());
 			return falseConstant;
 		case Constant::TRUE:
+			assert(!trueConstant.empty());
 			return trueConstant;
 		default:
-			assert(!"Wrong value");
+			assert(!"Wrong constant value");
+			return std::string(" CONSTANT_ERROR ");
 		}
 	}
 
@@ -154,6 +174,7 @@ std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool p
 			}
 		}
 		assert(!"Cannot find unary operator");
+		return std::string(" UNARY_ERROR ");
 	}
 
 	if (type == Proposition::BINARY) {
@@ -163,16 +184,56 @@ std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool p
 				std::string leftStr = toString(binaryOp->getLeft(), true);
 				std::string rightStr = toString(binaryOp->getRight(), true);
 				std::string result = leftStr + whitespace + pair.first + whitespace + rightStr;
-				if (parenthesis)
+				if (addParenthesis)
 					result = openingParenthesis + result + closingParenthesis;
 				return result;
 			}
 		}
 		assert(!"Cannot find binary operator");
+		return std::string(" BINARY_ERROR ");
 	}
 
-	assert(!"Error during printing");
-	return std::string();
+	assert(!"Error during proposition printing");
+	return std::string(" ERROR ");
+}
+
+void Converter::prepareStringToTokenMap() {
+	if(!openingParenthesis.empty())
+		stringToTokenMap.push_back(std::pair<std::string, Token>(openingParenthesis, Token(Token::OPEN_PAR, 0)));
+	if (!closingParenthesis.empty())
+		stringToTokenMap.push_back(std::pair<std::string, Token>(closingParenthesis, Token(Token::CLOSE_PAR, 0)));
+
+	for (int i = 0; i < variables.size(); i++) {
+		Token token(Token::VARIABLE, i);
+		stringToTokenMap.push_back(std::pair<std::string, Token>(variables[i], token));
+	}
+
+	if (!falseConstant.empty())
+		stringToTokenMap.push_back(std::pair<std::string, Token>(falseConstant, Token(Token::CONSTANT, Constant::Value::FALSE)));
+	if (!trueConstant.empty())
+		stringToTokenMap.push_back(std::pair<std::string, Token>(trueConstant, Token(Token::CONSTANT, Constant::Value::TRUE)));
+
+	for (int i = 0; i < unaryOperators.size(); i++) {
+		Token token(Token::UNARY, unaryOperators[i].second);
+		stringToTokenMap.push_back(std::pair<std::string, Token>(unaryOperators[i].first, token));
+	}
+
+	for (int i = 0; i < binaryOperators.size(); i++) {
+		Token token(Token::BINARY, binaryOperators[i].second);
+		stringToTokenMap.push_back(std::pair<std::string, Token>(binaryOperators[i].first, token));
+	}
+
+	for (auto element : stringToTokenMap) {
+		assert(!element.first.empty());
+	}
+
+	for (int i = 0; i < stringToTokenMap.size(); i++) {
+		assert(!stringToTokenMap[i].first.empty());
+		assert(stringToTokenMap[i].second.type != Token::UNDEFINED);
+		for (int j = i + 1; j < stringToTokenMap.size(); j++) {
+			assert(stringToTokenMap[i].first != stringToTokenMap[j].first);
+		}
+	}
 }
 
 bool Converter::pairParentheses(std::vector<Token>& tokens) {
