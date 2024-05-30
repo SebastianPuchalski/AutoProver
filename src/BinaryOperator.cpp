@@ -150,5 +150,3 @@ std::shared_ptr<Proposition> BinaryOperator::distributeOrAnd(bool orOverAnd, boo
         right = distRight;
     return nullptr;
 }
-
-// (((a & b) & c) | ((d & e) & f)) <-> (((((a | d) & (b | d)) & (c | d)) & (((a | e) & (b | e)) & (c | e))) & (((a | f) & (b | f)) & (c | f)))

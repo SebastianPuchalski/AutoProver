@@ -1,8 +1,9 @@
 #include "ModelChecker.hpp"
 
 #include <cassert>
+#include <stdexcept>
 
-bool NaiveModelChecker::isTautology(const std::shared_ptr<Proposition>& proposition) const {
+bool NaiveModelChecker::isValid(const std::shared_ptr<Proposition>& proposition) const {
 	std::vector<int> variableIds;
 	variableIdsFromProposition(proposition, variableIds);
 	std::vector<bool> varValues;
@@ -12,9 +13,14 @@ bool NaiveModelChecker::isTautology(const std::shared_ptr<Proposition>& proposit
 	int maxId = *std::max_element(variableIds.begin(), variableIds.end());
 	varValues = std::vector<bool>(maxId + 1);
 
-	for (unsigned long long model = 0; model < ((unsigned long long)1 << variableIds.size()); model++) {
+	typedef long long unsigned uint64;
+	if(varValues.size() > 64)
+		throw std::runtime_error("Variable id is greater than 63");
+	int modelCount = (static_cast<uint64>(1) << variableIds.size());
+
+	for (uint64 model = 0; model < modelCount; model++) {
 		for (int i = 0; i < variableIds.size(); i++) {
-			bool varValue = (model & ((unsigned long long)1 << i)) > 0;
+			bool varValue = (model & (static_cast<uint64>(1) << i)) > 0;
 			int id = variableIds[i];
 			varValues[id] = varValue;
 		}
@@ -26,8 +32,8 @@ bool NaiveModelChecker::isTautology(const std::shared_ptr<Proposition>& proposit
 }
 
 bool NaiveModelChecker::isContradiction(const std::shared_ptr<Proposition>& proposition) const {
-	auto nProposition = std::make_shared<UnaryOperator>(proposition, UnaryOperator::NOT);
-	return isTautology(nProposition);
+	auto notProposition = std::make_shared<UnaryOperator>(proposition, UnaryOperator::NOT);
+	return isValid(notProposition);
 }
 
 void NaiveModelChecker::variableIdsFromProposition(const std::shared_ptr<Proposition>& proposition,

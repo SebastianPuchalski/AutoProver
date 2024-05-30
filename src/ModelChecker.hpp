@@ -12,7 +12,7 @@ public:
 	NaiveModelChecker() = default;
 	virtual ~NaiveModelChecker() = default;
 
-	bool isTautology(const std::shared_ptr<Proposition>& proposition) const;
+	bool isValid(const std::shared_ptr<Proposition>& proposition) const;
 	bool isContradiction(const std::shared_ptr<Proposition>& proposition) const;
 
 private:

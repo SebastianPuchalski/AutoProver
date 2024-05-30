@@ -4,6 +4,7 @@
 #include "BinaryOperator.hpp"
 #include "Converter.hpp"
 #include "ModelChecker.hpp"
+#include "Resolution.hpp"
 
 #include <iostream>
 
@@ -52,15 +53,20 @@ int main() {
 
 		if (proposition) {
 			cout << converter.toString(proposition) << endl;
+
 			NaiveModelChecker checker;
-			bool isTautology = checker.isTautology(proposition);
+			bool isTautology = checker.isValid(proposition);
 			bool isContradiction = checker.isContradiction(proposition);
 			if (isTautology)
-				cout << "Tautology\n";
+				cout << "Model checking: valid\n";
 			else if (isContradiction)
-				cout << "Contradiction\n";
+				cout << "Model checking: contradiction\n";
 			else
-				cout << "Contingent proposition\n";
+				cout << "Model checking: contingent proposition\n";
+
+			bool valid = Resolution::isValid(proposition);
+			cout << "Resolution: " << (valid ? "valid" : "not valid") << endl;
+
 			cout << "CNF: " << converter.toString(proposition->toCNF()) << endl;
 			cout << "DNF: " << converter.toString(proposition->toDNF()) << endl;
 		}
