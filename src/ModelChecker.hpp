@@ -1,6 +1,9 @@
 #pragma once
 
-#include "Proposition.hpp"
+#include "Variable.hpp"
+#include "Constant.hpp"
+#include "UnaryOperator.hpp"
+#include "BinaryOperator.hpp"
 
 #include <vector>
 

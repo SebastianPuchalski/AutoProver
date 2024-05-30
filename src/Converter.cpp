@@ -64,6 +64,8 @@ Converter::Converter() {
 	binaryOpPrecedenceLevels[BinaryOperator::IMP] = ++level;
 	binaryOpPrecedenceLevels[BinaryOperator::OR] = ++level;
 	binaryOpPrecedenceLevels[BinaryOperator::AND] = ++level;
+
+	skipParenthesisIfAssociative = false;
 }
 
 void Converter::getStringsForVariables(std::vector<std::string>& variables) const {
@@ -124,6 +126,10 @@ void Converter::setBinaryOpPrecedenceLevels(const std::vector<int>& precedenceLe
 	binaryOpPrecedenceLevels = precedenceLevels;
 }
 
+void Converter::setParenthesisIfBinOpIsAssociative(bool skip) {
+	skipParenthesisIfAssociative = skip;
+}
+
 std::shared_ptr<Proposition> Converter::fromString(const std::string& str) {
 	if(stringToTokenMap.empty())
 		prepareStringToTokenMap();
@@ -180,9 +186,19 @@ std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool a
 	if (type == Proposition::BINARY) {
 		std::shared_ptr<BinaryOperator> binaryOp = std::static_pointer_cast<BinaryOperator>(proposition);
 		for (auto pair : binaryOperators) {
+			bool leftAddPar = true;
+			bool rightAddPar = true;
 			if (pair.second == binaryOp->getOp()) {
-				std::string leftStr = toString(binaryOp->getLeft(), true);
-				std::string rightStr = toString(binaryOp->getRight(), true);
+				if (skipParenthesisIfAssociative && binaryOp->isAssociative()) {
+					if (binaryOp->getLeft()->getType() == Proposition::BINARY)
+						if (std::static_pointer_cast<BinaryOperator>(binaryOp->getLeft())->getOp() == binaryOp->getOp())
+							leftAddPar = false;
+					if (binaryOp->getRight()->getType() == Proposition::BINARY)
+						if (std::static_pointer_cast<BinaryOperator>(binaryOp->getRight())->getOp() == binaryOp->getOp())
+							rightAddPar = false;
+				}
+				std::string leftStr = toString(binaryOp->getLeft(), leftAddPar);
+				std::string rightStr = toString(binaryOp->getRight(), rightAddPar);
 				std::string result = leftStr + whitespace + pair.first + whitespace + rightStr;
 				if (addParenthesis)
 					result = openingParenthesis + result + closingParenthesis;

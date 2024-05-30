@@ -12,9 +12,9 @@ bool NaiveModelChecker::isTautology(const std::shared_ptr<Proposition>& proposit
 	int maxId = *std::max_element(variableIds.begin(), variableIds.end());
 	varValues = std::vector<bool>(maxId + 1);
 
-	for (unsigned model = 0; model < (1 << variableIds.size()); model++) {
+	for (unsigned long long model = 0; model < ((unsigned long long)1 << variableIds.size()); model++) {
 		for (int i = 0; i < variableIds.size(); i++) {
-			bool varValue = (model & (1 << i)) > 0;
+			bool varValue = (model & ((unsigned long long)1 << i)) > 0;
 			int id = variableIds[i];
 			varValues[id] = varValue;
 		}
@@ -75,7 +75,7 @@ bool NaiveModelChecker::evaluate(const std::shared_ptr<Proposition>& proposition
 	if (type == Proposition::UNARY) {
 		std::shared_ptr<UnaryOperator> unaryOp = std::static_pointer_cast<UnaryOperator>(proposition);
 		bool a = evaluate(unaryOp->getOperand(), varValues);
-		bool b = ((unsigned)unaryOp->getOp() & (1 << !a)) > 0;
+		bool b = ((unsigned)unaryOp->getOp() & ((unsigned)1 << (int)!a)) > 0;
 		#ifndef NDEBUG
 		bool bDebug = false;
 		switch (unaryOp->getOp()) {

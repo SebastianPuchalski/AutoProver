@@ -1,6 +1,9 @@
 #pragma once
 
-#include "Proposition.hpp"
+#include "Variable.hpp"
+#include "Constant.hpp"
+#include "UnaryOperator.hpp"
+#include "BinaryOperator.hpp"
 
 #include <string>
 #include <vector>
@@ -26,6 +29,8 @@ public:
 		                      char whitespace = ' ');
 	void setBinaryOpPrecedenceLevels(const std::vector<int>& precedenceLevels);
 
+	void setParenthesisIfBinOpIsAssociative(bool skip);
+
 	std::shared_ptr<Proposition> fromString(const std::string& str);
 	std::string toString(std::shared_ptr<Proposition> proposition, bool addParenthesis = false);
 
@@ -39,6 +44,7 @@ private:
 	std::string closingParenthesis;
 	char whitespace;
 	std::vector<int> binaryOpPrecedenceLevels;
+	bool skipParenthesisIfAssociative;
 
 	struct Token {
 		enum Type {UNDEFINED, OPEN_PAR, CLOSE_PAR, VARIABLE, CONSTANT, UNARY, BINARY};
@@ -52,7 +58,7 @@ private:
 		* - Type of unary operator (for UNARY)
 		* - Type of binary operator (for BINARY)
 		*/
-		Token() : type(UNDEFINED) {}
+		Token() : type(UNDEFINED), value(0) {}
 		Token(Type type, int value) : type(type), value(value) {}
 
 	};

@@ -1,4 +1,7 @@
-#include "Proposition.hpp"
+#include "Variable.hpp"
+#include "Constant.hpp"
+#include "UnaryOperator.hpp"
+#include "BinaryOperator.hpp"
 #include "Converter.hpp"
 #include "ModelChecker.hpp"
 
@@ -38,6 +41,7 @@ void printConverterSettings(const Converter& converter) {
 
 int main() {
 	Converter converter;
+	converter.setParenthesisIfBinOpIsAssociative(true);
 	printConverterSettings(converter);
 	cout << endl;
 
@@ -45,6 +49,7 @@ int main() {
 		string str;
 		getline(cin, str);
 		shared_ptr<Proposition> proposition = converter.fromString(str);
+
 		if (proposition) {
 			cout << converter.toString(proposition) << endl;
 			NaiveModelChecker checker;
@@ -56,6 +61,8 @@ int main() {
 				cout << "Contradiction\n";
 			else
 				cout << "Contingent proposition\n";
+			cout << "CNF: " << converter.toString(proposition->toCNF()) << endl;
+			cout << "DNF: " << converter.toString(proposition->toDNF()) << endl;
 		}
 		else {
 			cout << "Error during parsing!\n";

@@ -127,14 +127,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\BinaryOperator.hpp" />
+    <ClInclude Include="src\Constant.hpp" />
     <ClInclude Include="src\Converter.hpp" />
     <ClInclude Include="src\ModelChecker.hpp" />
     <ClInclude Include="src\Proposition.hpp" />
+    <ClInclude Include="src\UnaryOperator.hpp" />
+    <ClInclude Include="src\Variable.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\BinaryOperator.cpp" />
+    <ClCompile Include="src\Constant.cpp" />
     <ClCompile Include="src\Converter.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\ModelChecker.cpp" />
+    <ClCompile Include="src\Proposition.cpp" />
+    <ClCompile Include="src\UnaryOperator.cpp" />
+    <ClCompile Include="src\Variable.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
