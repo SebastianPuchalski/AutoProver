@@ -1,2 +1,7 @@
 test/.vs
+test/test
+test/x64
+
 tool/.vs
+tool/AutoProver
+tool/x64
