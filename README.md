@@ -1,6 +1,6 @@
 # AutoProver
 
-### Simple Automated Theorem Proving tool for Propositional Calculus
+### Automated Theorem Proving tool for Propositional Calculus
 
 **Work in progress**
 
