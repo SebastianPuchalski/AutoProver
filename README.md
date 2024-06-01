@@ -7,4 +7,4 @@
 At the moment, the project consists of:
 - Formulas parser (including operators precedence) and printer
 - Naive Model Checking
-- Fast implementation of the Resolution method
+- Implementation of the Resolution method
