@@ -37,3 +37,7 @@ std::shared_ptr<Proposition> Variable::moveNotInwardsOp(int binaryOp, bool& anyC
 std::shared_ptr<Proposition> Variable::distributeOrAnd(bool orOverAnd, bool& anyChange) {
     return nullptr;
 }
+
+std::shared_ptr<Proposition> Variable::reduce(bool& anyChange) {
+    return nullptr;
+}

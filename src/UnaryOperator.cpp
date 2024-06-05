@@ -100,3 +100,10 @@ std::shared_ptr<Proposition> UnaryOperator::distributeOrAnd(bool orOverAnd, bool
         operand = distOperand;
     return nullptr;
 }
+
+std::shared_ptr<Proposition> UnaryOperator::reduce(bool& anyChange) {
+    auto reducedOperand = operand->reduce(anyChange);
+    if (reducedOperand)
+        operand = reducedOperand;
+    return nullptr;
+}

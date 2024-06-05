@@ -20,4 +20,5 @@ private:
     virtual std::shared_ptr<Proposition> eliminateDoubleNot(bool& anyChange);
     virtual std::shared_ptr<Proposition> moveNotInwardsOp(int binaryOp, bool& anyChange);
     virtual std::shared_ptr<Proposition> distributeOrAnd(bool orOverAnd, bool& anyChange);
+    virtual std::shared_ptr<Proposition> reduce(bool& anyChange);
 };

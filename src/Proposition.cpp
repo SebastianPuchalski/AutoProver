@@ -42,9 +42,18 @@ std::shared_ptr<Proposition> Proposition::toNormalForm(bool cnf) const {
     anyChange = true;
     while (anyChange) {
         anyChange = false;
+
         newProposition = proposition->distributeOrAnd(cnf, anyChange);
         if (newProposition)
             proposition = newProposition;
+
+        bool anyChangeR = true;
+        while (anyChangeR) {
+            anyChangeR = false;
+            newProposition = proposition->reduce(anyChangeR);
+            if (newProposition)
+                proposition = newProposition;
+        }
     }
 
     return proposition;

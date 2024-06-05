@@ -1,5 +1,7 @@
 #include "BinaryOperator.hpp"
 
+#include "Variable.hpp"
+#include "Constant.hpp"
 #include "UnaryOperator.hpp"
 
 BinaryOperator::BinaryOperator(std::shared_ptr<Proposition> left, Op op,
@@ -148,5 +150,105 @@ std::shared_ptr<Proposition> BinaryOperator::distributeOrAnd(bool orOverAnd, boo
         left = distLeft;
     if (distRight)
         right = distRight;
+    return nullptr;
+}
+
+std::shared_ptr<Proposition> BinaryOperator::reduce(bool& anyChange) {
+    if (op == AND || op == OR) {
+        if (left->getType() == CONSTANT) {
+            auto constLeft = std::static_pointer_cast<Constant>(left);
+            bool value = constLeft->getValue();
+            anyChange = true;
+            if (op == AND) {
+                if (value)
+                    return right;
+                else
+                    std::make_shared<Constant>(Constant::FALSE);
+            }
+            else {
+                if (value)
+                    std::make_shared<Constant>(Constant::TRUE);
+                else
+                    return right;
+            }
+        }
+
+        if (right->getType() == CONSTANT) {
+            auto constRight = std::static_pointer_cast<Constant>(right);
+            bool value = constRight->getValue();
+            anyChange = true;
+            if (op == AND) {
+                if (value)
+                    return left;
+                else
+                    std::make_shared<Constant>(Constant::FALSE);
+            }
+            else {
+                if (value)
+                    std::make_shared<Constant>(Constant::TRUE);
+                else
+                    return left;
+            }
+        }
+
+        bool leftIsLiteral = false;
+        bool leftNeg;
+        int leftVarId;
+        if (left->getType() == VARIABLE) {
+            auto varLeft = std::static_pointer_cast<Variable>(left);
+            leftIsLiteral = true;
+            leftNeg = false;
+            leftVarId = varLeft->getId();
+        }
+        if (left->getType() == UNARY) {
+            auto unaryLeft = std::static_pointer_cast<UnaryOperator>(left);
+            if (unaryLeft->getOp() == UnaryOperator::NOT) {
+                if (unaryLeft->getOperand()->getType() == VARIABLE) {
+                    auto varLeft = std::static_pointer_cast<Variable>(unaryLeft->getOperand());
+                    leftIsLiteral = true;
+                    leftNeg = true;
+                    leftVarId = varLeft->getId();
+                }
+            }
+        }
+
+        bool rightIsLiteral = false;
+        bool rightNeg;
+        int rightVarId;
+        if (right->getType() == VARIABLE) {
+            auto varRight = std::static_pointer_cast<Variable>(right);
+            rightIsLiteral = true;
+            rightNeg = false;
+            rightVarId = varRight->getId();
+        }
+        if (right->getType() == UNARY) {
+            auto unaryRight = std::static_pointer_cast<UnaryOperator>(right);
+            if (unaryRight->getOp() == UnaryOperator::NOT) {
+                if (unaryRight->getOperand()->getType() == VARIABLE) {
+                    auto varLeft = std::static_pointer_cast<Variable>(unaryRight->getOperand());
+                    rightIsLiteral = true;
+                    rightNeg = true;
+                    rightVarId = varLeft->getId();
+                }
+            }
+        }
+
+        if (leftIsLiteral && rightIsLiteral) {
+            if (leftVarId == rightVarId) {
+                anyChange = true;
+                if (leftNeg == rightNeg)
+                    return left;
+                else
+                    return std::make_shared<Constant>(Constant::Value(op == OR));
+            }
+        }
+    }
+
+    auto reducedLeft = left->reduce(anyChange);
+    auto reducedRight = right->reduce(anyChange);
+    if (reducedLeft)
+        left = reducedLeft;
+    if (reducedRight)
+        right = reducedRight;
     return nullptr;
 }
