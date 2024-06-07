@@ -40,6 +40,9 @@ public:
     void setOp(Op op);
 
     virtual std::shared_ptr<Proposition> copy() const;
+
+    virtual void getVariableIds(std::vector<int>& variableIds) const;
+    virtual uint64 evaluate(const std::vector<uint64>& varValues) const;
     bool isCommutative() const;
     bool isAssociative() const;
 

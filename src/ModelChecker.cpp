@@ -1,32 +1,62 @@
 #include "ModelChecker.hpp"
 
+#include "Variable.hpp"
+#include "Constant.hpp"
+#include "UnaryOperator.hpp"
+#include "BinaryOperator.hpp"
+
 #include <cassert>
 #include <stdexcept>
+#include <algorithm>
 
 bool NaiveModelChecker::isValid(const std::shared_ptr<Proposition>& proposition) const {
+	const int BIT_COUNT = sizeof(uint64) * 8;
+	const int LOG_BIT_COUNT = 6;
+	assert((1 << LOG_BIT_COUNT) == BIT_COUNT);
+
 	std::vector<int> variableIds;
-	variableIdsFromProposition(proposition, variableIds);
-	std::vector<bool> varValues;
+	proposition->getVariableIds(variableIds);
+	std::sort(variableIds.begin(), variableIds.end());
+	if (variableIds.size() > BIT_COUNT)
+		throw std::runtime_error("NaiveModelChecker supports max 64 variables");
+	const int modelCount = (static_cast<uint64>(1) << variableIds.size());
+
+	std::vector<uint64> varValues;
 	if (variableIds.empty())
-		return evaluate(proposition, varValues);
+		return proposition->evaluate(varValues) != 0;
 
+	assert(*std::min_element(variableIds.begin(), variableIds.end()) >= 0);
 	int maxId = *std::max_element(variableIds.begin(), variableIds.end());
-	varValues = std::vector<bool>(maxId + 1);
+	varValues = std::vector<uint64>(maxId + 1);
 
-	typedef long long unsigned uint64;
-	if(varValues.size() > 64)
-		throw std::runtime_error("Variable id is greater than 63");
-	int modelCount = (static_cast<uint64>(1) << variableIds.size());
-
-	for (uint64 model = 0; model < modelCount; model++) {
-		for (int i = 0; i < variableIds.size(); i++) {
-			bool varValue = (model & (static_cast<uint64>(1) << i)) > 0;
-			int id = variableIds[i];
-			varValues[id] = varValue;
+	if (variableIds.size() < LOG_BIT_COUNT) {
+		for (uint64 model = 0; model < modelCount; model++) {
+			for (int i = 0; i < variableIds.size(); i++) {
+				bool varValue = (model & (static_cast<uint64>(1) << i)) != 0;
+				varValues[variableIds[i]] = varValue ? ULLONG_MAX : 0;
+			}
+			if (proposition->evaluate(varValues) == 0)
+				return false;
 		}
-		bool result = evaluate(proposition, varValues);
-		if (!result)
-			return false;
+	}
+	else {
+		for (int i = 0; i < LOG_BIT_COUNT; i++) {
+			uint64 mask = 0;
+			for (uint64 model = 0; model < BIT_COUNT; model++) {
+				bool varValue = (model & (static_cast<uint64>(1) << i)) != 0;
+				if (varValue)
+					mask |= (static_cast<uint64>(1) << model);
+			}
+			varValues[variableIds[i]] = mask;
+		}
+		for (uint64 model = 0; model < modelCount; model += BIT_COUNT) {
+			for (int i = LOG_BIT_COUNT; i < variableIds.size(); i++) {
+				bool varValue = (model & (static_cast<uint64>(1) << i)) != 0;
+				varValues[variableIds[i]] = varValue ? ULLONG_MAX : 0;
+			}
+			if (proposition->evaluate(varValues) != ULLONG_MAX)
+				return false;
+		}
 	}
 	return true;
 }
@@ -34,117 +64,4 @@ bool NaiveModelChecker::isValid(const std::shared_ptr<Proposition>& proposition)
 bool NaiveModelChecker::isContradiction(const std::shared_ptr<Proposition>& proposition) const {
 	auto notProposition = std::make_shared<UnaryOperator>(proposition, UnaryOperator::NOT);
 	return isValid(notProposition);
-}
-
-void NaiveModelChecker::variableIdsFromProposition(const std::shared_ptr<Proposition>& proposition,
-	                                               std::vector<int>& variableIds) const {
-	Proposition::Type type = proposition->getType();
-
-	if (type == Proposition::VARIABLE) {
-		int id = std::static_pointer_cast<Variable>(proposition)->getId();
-		bool alreadyExists = false;
-		for (auto item : variableIds) {
-			if (item == id)
-				alreadyExists = true;
-		}
-		if(!alreadyExists)
-			variableIds.push_back(id);
-	}
-
-	if (type == Proposition::UNARY) {
-		std::shared_ptr<UnaryOperator> unaryOp = std::static_pointer_cast<UnaryOperator>(proposition);
-		variableIdsFromProposition(unaryOp->getOperand(), variableIds);
-	}
-
-	if (type == Proposition::BINARY) {
-		std::shared_ptr<BinaryOperator> binaryOp = std::static_pointer_cast<BinaryOperator>(proposition);
-		variableIdsFromProposition(binaryOp->getLeft(), variableIds);
-		variableIdsFromProposition(binaryOp->getRight(), variableIds);
-	}
-}
-
-bool NaiveModelChecker::evaluate(const std::shared_ptr<Proposition>& proposition,
-	                             const std::vector<bool>& varValues) const {
-	Proposition::Type type = proposition->getType();
-
-	if (type == Proposition::VARIABLE) {
-		std::shared_ptr<Variable> variable = std::static_pointer_cast<Variable>(proposition);
-		assert(variable->getId() < varValues.size());
-		return varValues[variable->getId()];
-	}
-
-	if (type == Proposition::CONSTANT) {
-		std::shared_ptr<Constant> constant = std::static_pointer_cast<Constant>(proposition);
-		return constant->getValue();
-	}
-
-	if (type == Proposition::UNARY) {
-		std::shared_ptr<UnaryOperator> unaryOp = std::static_pointer_cast<UnaryOperator>(proposition);
-		bool a = evaluate(unaryOp->getOperand(), varValues);
-		bool b = ((unsigned)unaryOp->getOp() & ((unsigned)1 << (int)!a)) > 0;
-		#ifndef NDEBUG
-		bool bDebug = false;
-		switch (unaryOp->getOp()) {
-		case UnaryOperator::FALSE:
-			bDebug = false; break;
-		case UnaryOperator::TRANSFER:
-			bDebug = a; break;
-		case UnaryOperator::NOT:
-			bDebug = !a; break;
-		case UnaryOperator::TRUE:
-			bDebug = true; break;
-		}
-		assert(bDebug == b);
-		#endif
-		return b;
-	}
-
-	if (type == Proposition::BINARY) {
-		std::shared_ptr<BinaryOperator> binaryOp = std::static_pointer_cast<BinaryOperator>(proposition);
-		bool a = evaluate(binaryOp->getLeft(), varValues);
-		bool b = evaluate(binaryOp->getRight(), varValues);
-		bool c = ((unsigned)binaryOp->getOp() & (1 << (!a * 2 + !b))) > 0;
-		#ifndef NDEBUG
-		bool cDebug = false;
-		switch (binaryOp->getOp()) {
-		case BinaryOperator::FALSE:
-			cDebug = false; break;
-		case BinaryOperator::AND:
-			cDebug = a && b; break;
-		case BinaryOperator::NIMP:
-			cDebug = a && !b; break;
-		case BinaryOperator::A:
-			cDebug = a; break;
-		case BinaryOperator::NRIMP:
-			cDebug = b && !a; break;
-		case BinaryOperator::B:
-			cDebug = b; break;
-		case BinaryOperator::XOR:
-			cDebug = a != b; break;
-		case BinaryOperator::OR:
-			cDebug = a || b; break;
-		case BinaryOperator::NOR:
-			cDebug = !(a || b); break;
-		case BinaryOperator::XNOR:
-			cDebug = a == b; break;
-		case BinaryOperator::NB:
-			cDebug = !b; break;
-		case BinaryOperator::RIMP:
-			cDebug = !b || a; break;
-		case BinaryOperator::NA:
-			cDebug = !a; break;
-		case BinaryOperator::IMP:
-			cDebug = !a || b; break;
-		case BinaryOperator::NAND:
-			cDebug = !(a && b); break;
-		case BinaryOperator::TRUE:
-			cDebug = true; break;
-		}
-		assert(cDebug == c);
-		#endif
-		return c;
-	}
-
-	assert(!"Evaluation error");
-	return false;
 }

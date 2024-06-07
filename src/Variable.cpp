@@ -1,5 +1,7 @@
 #include "Variable.hpp"
 
+#include <cassert>
+
 Variable::Variable(int id) : id(id) {}
 
 Variable::Type Variable::getType() const {
@@ -16,6 +18,21 @@ void Variable::setId(int id) {
 
 std::shared_ptr<Proposition> Variable::copy() const {
     return std::make_shared<Variable>(*this);
+}
+
+void Variable::getVariableIds(std::vector<int>& variableIds) const {
+    bool alreadyExists = false;
+    for (auto item : variableIds) {
+        if (item == id)
+            alreadyExists = true;
+    }
+    if (!alreadyExists)
+        variableIds.push_back(id);
+}
+
+uint64 Variable::evaluate(const std::vector<uint64>& varValues) const {
+    assert(id < varValues.size());
+    return varValues[id];
 }
 
 std::shared_ptr<Proposition> Variable::transformXnorToImp() {

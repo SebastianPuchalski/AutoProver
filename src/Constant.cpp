@@ -18,6 +18,13 @@ std::shared_ptr<Proposition> Constant::copy() const {
     return std::make_shared<Constant>(*this);
 }
 
+void Constant::getVariableIds(std::vector<int>& variableIds) const {
+}
+
+uint64 Constant::evaluate(const std::vector<uint64>& varValues) const {
+    return value == TRUE ? ULLONG_MAX : 0;
+}
+
 std::shared_ptr<Proposition> Constant::transformXnorToImp() {
     return nullptr;
 }

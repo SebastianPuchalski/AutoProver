@@ -31,6 +31,27 @@ std::shared_ptr<Proposition> UnaryOperator::copy() const {
     return std::make_shared<UnaryOperator>(operand->copy(), op);
 }
 
+void UnaryOperator::getVariableIds(std::vector<int>& variableIds) const {
+    operand->getVariableIds(variableIds);
+}
+
+uint64 UnaryOperator::evaluate(const std::vector<uint64>& varValues) const {
+    uint64 a = operand->evaluate(varValues);
+    switch (op) {
+    case UnaryOperator::FALSE:
+        return 0;
+    case UnaryOperator::TRANSFER:
+        return a;
+    case UnaryOperator::NOT:
+        return ~a;
+    case UnaryOperator::TRUE:
+        return ULLONG_MAX;
+    default:
+        assert(!"Unsupported operation");
+    }
+    return 0;
+}
+
 std::shared_ptr<Proposition> UnaryOperator::transformXnorToImp() {
     auto transOperand = operand->transformXnorToImp();
     if (transOperand)

@@ -4,6 +4,8 @@
 #include "Constant.hpp"
 #include "UnaryOperator.hpp"
 
+#include <cassert>
+
 BinaryOperator::BinaryOperator(std::shared_ptr<Proposition> left, Op op,
     std::shared_ptr<Proposition> right) :
     left(left), op(op), right(right) {}
@@ -38,6 +40,53 @@ void BinaryOperator::setOp(Op op) {
 
 std::shared_ptr<Proposition> BinaryOperator::copy() const {
     return std::make_shared<BinaryOperator>(left->copy(), op, right->copy());
+}
+
+void BinaryOperator::getVariableIds(std::vector<int>& variableIds) const {
+    left->getVariableIds(variableIds);
+    right->getVariableIds(variableIds);
+}
+
+uint64 BinaryOperator::evaluate(const std::vector<uint64>& varValues) const {
+    uint64 a = left->evaluate(varValues);
+    uint64 b = right->evaluate(varValues);
+    switch (op) {
+    case BinaryOperator::FALSE:
+        return 0;
+    case BinaryOperator::AND:
+        return a & b;
+    case BinaryOperator::NIMP:
+        return a & ~b;
+    case BinaryOperator::A:
+        return a;
+    case BinaryOperator::NRIMP:
+        return b & ~a;
+    case BinaryOperator::B:
+        return b;
+    case BinaryOperator::XOR:
+        return a ^ b;
+    case BinaryOperator::OR:
+        return a | b;
+    case BinaryOperator::NOR:
+        return ~(a | b);
+    case BinaryOperator::XNOR:
+        return ~(a ^ b);
+    case BinaryOperator::NB:
+        return ~b;
+    case BinaryOperator::RIMP:
+        return ~b | a;
+    case BinaryOperator::NA:
+        return ~a;
+    case BinaryOperator::IMP:
+        return ~a | b;
+    case BinaryOperator::NAND:
+        return ~(a & b);
+    case BinaryOperator::TRUE:
+        return ULLONG_MAX;
+    default:
+        assert(!"Unsupported operator");
+    }
+    return 0;
 }
 
 bool BinaryOperator::isCommutative() const {

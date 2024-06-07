@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Common.hpp"
+
 #include <memory>
+#include <vector>
 
 class Proposition {
 public:
@@ -10,6 +13,9 @@ public:
     virtual Type getType() const = 0;
 
     virtual std::shared_ptr<Proposition> copy() const = 0;
+
+    virtual void getVariableIds(std::vector<int>& variableIds) const = 0;
+    virtual uint64 evaluate(const std::vector<uint64>& varValues) const = 0;
 
     std::shared_ptr<Proposition> toNormalForm(bool cnf) const;
     std::shared_ptr<Proposition> toCNF() const;
