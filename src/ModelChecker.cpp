@@ -19,7 +19,7 @@ bool NaiveModelChecker::isValid(const std::shared_ptr<Proposition>& proposition)
 	std::sort(variableIds.begin(), variableIds.end());
 	if (variableIds.size() > BIT_COUNT)
 		throw std::runtime_error("NaiveModelChecker supports max 64 variables");
-	const int modelCount = (static_cast<uint64_t>(1) << variableIds.size());
+	const uint64_t modelCount = (static_cast<uint64_t>(1) << variableIds.size());
 
 	std::vector<uint64_t> varValues;
 	if (variableIds.empty())

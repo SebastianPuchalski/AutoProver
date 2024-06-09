@@ -45,8 +45,14 @@ int stringToTokens(std::vector<T>& result, std::string str,
 }
 
 Converter::Converter() {
-	for (char c = 'a'; c <= 'z'; c++) {
-		variables.push_back(std::string(1, c));
+	const int VARIABLE_SETS_NUM = 2;
+	for (int i = 0; i < VARIABLE_SETS_NUM; i++) {
+		for (char c = 'a'; c <= 'z'; c++) {
+			std::string name(1, c);
+			if (i > 0)
+				name += std::to_string(i);
+			variables.push_back(name);
+		}
 	}
 
 	unaryOperators.push_back(std::pair<std::string, UnaryOperator::Op>("~", UnaryOperator::NOT));

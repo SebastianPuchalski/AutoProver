@@ -10,7 +10,7 @@
 #include <iostream>
 #include <unordered_set>
 #include <map>
-//#include <chrono>
+#include <chrono>
 
 struct BitClause {
 	static const int VARIABLE_COUNT = sizeof(uint64_t) * 8;
@@ -261,14 +261,13 @@ bool resolve(std::vector<BitClause> clauses) {
 	BucketBuff procClauses;
 	BucketBuff currClauses;
 
-	for (auto it = clauses.begin(); it != clauses.end();) {
-		auto result = allClauses.insert(*it);
+	for (int i = 0; i < clauses.size(); i++) {
+		auto result = allClauses.insert(clauses[i]);
 		if (!result.second) {
-			std::swap(*it, clauses.back());
+			std::swap(clauses[i], clauses.back());
 			clauses.pop_back();
+			i--;
 		}
-		else
-			it++;
 	}
 
 	while (clauses.size()) {
@@ -319,12 +318,13 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 	clauses.clear();
 	clauses.shrink_to_fit();
 
-	//auto start = std::chrono::high_resolution_clock::now();
+	auto start = std::chrono::high_resolution_clock::now();
 
 	auto result = resolve(bitClauses);
 
-	//auto end = std::chrono::high_resolution_clock::now();
-	//auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	std::cout << "Duration: " << (float)duration.count() / 1000 << std::endl;
 
 	return result;
 }

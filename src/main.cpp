@@ -47,7 +47,7 @@ int main() {
 	cout << endl;
 
 	while (true) {
-		string str;// = "((a -> b) & (~b -> ~a) & (c <-> (d | e)) & (f <-> (g & h))) -> (((i | (j & k)) -> (l | (m & n))) & ((o & p) -> (q & (r | s))) & ((t | (u & v)) -> (w | (x & y))) & ((z & a) -> (b & (c | d))))";
+		string str;
 		getline(cin, str);
 		shared_ptr<Proposition> proposition = converter.fromString(str);
 
