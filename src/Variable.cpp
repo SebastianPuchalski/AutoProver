@@ -30,7 +30,7 @@ void Variable::getVariableIds(std::vector<int>& variableIds) const {
         variableIds.push_back(id);
 }
 
-uint64 Variable::evaluate(const std::vector<uint64>& varValues) const {
+uint64_t Variable::evaluate(const std::vector<uint64_t>& varValues) const {
     assert(id < varValues.size());
     return varValues[id];
 }

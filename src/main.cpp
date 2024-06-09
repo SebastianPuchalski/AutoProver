@@ -47,7 +47,7 @@ int main() {
 	cout << endl;
 
 	while (true) {
-		string str;
+		string str;// = "((a -> b) & (~b -> ~a) & (c <-> (d | e)) & (f <-> (g & h))) -> (((i | (j & k)) -> (l | (m & n))) & ((o & p) -> (q & (r | s))) & ((t | (u & v)) -> (w | (x & y))) & ((z & a) -> (b & (c | d))))";
 		getline(cin, str);
 		shared_ptr<Proposition> proposition = converter.fromString(str);
 
@@ -67,8 +67,8 @@ int main() {
 			bool valid = Resolution::isValid(proposition);
 			cout << "Resolution: " << (valid ? "valid" : "not valid") << endl;
 
-			cout << "CNF: " << converter.toString(proposition->toCNF()) << endl;
-			cout << "DNF: " << converter.toString(proposition->toDNF()) << endl;
+			/*cout << "CNF: " << converter.toString(proposition->toCNF()) << endl;
+			cout << "DNF: " << converter.toString(proposition->toDNF()) << endl;*/
 		}
 		else {
 			cout << "Error during parsing!\n";

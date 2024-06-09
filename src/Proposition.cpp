@@ -2,11 +2,11 @@
 
 #include "BinaryOperator.hpp"
 
-std::shared_ptr<Proposition> Proposition::toCNF() const {
+std::shared_ptr<Proposition> Proposition::toCnf() const {
     return toNormalForm(true);
 }
 
-std::shared_ptr<Proposition> Proposition::toDNF() const {
+std::shared_ptr<Proposition> Proposition::toDnf() const {
     return toNormalForm(false);
 }
 
@@ -47,13 +47,13 @@ std::shared_ptr<Proposition> Proposition::toNormalForm(bool cnf) const {
         if (newProposition)
             proposition = newProposition;
 
-        bool anyChangeR = true;
+        /*bool anyChangeR = true;
         while (anyChangeR) {
             anyChangeR = false;
             newProposition = proposition->reduce(anyChangeR);
             if (newProposition)
                 proposition = newProposition;
-        }
+        }*/
     }
 
     return proposition;

@@ -47,9 +47,9 @@ void BinaryOperator::getVariableIds(std::vector<int>& variableIds) const {
     right->getVariableIds(variableIds);
 }
 
-uint64 BinaryOperator::evaluate(const std::vector<uint64>& varValues) const {
-    uint64 a = left->evaluate(varValues);
-    uint64 b = right->evaluate(varValues);
+uint64_t BinaryOperator::evaluate(const std::vector<uint64_t>& varValues) const {
+    uint64_t a = left->evaluate(varValues);
+    uint64_t b = right->evaluate(varValues);
     switch (op) {
     case BinaryOperator::FALSE:
         return 0;

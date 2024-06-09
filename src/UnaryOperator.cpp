@@ -35,8 +35,8 @@ void UnaryOperator::getVariableIds(std::vector<int>& variableIds) const {
     operand->getVariableIds(variableIds);
 }
 
-uint64 UnaryOperator::evaluate(const std::vector<uint64>& varValues) const {
-    uint64 a = operand->evaluate(varValues);
+uint64_t UnaryOperator::evaluate(const std::vector<uint64_t>& varValues) const {
+    uint64_t a = operand->evaluate(varValues);
     switch (op) {
     case UnaryOperator::FALSE:
         return 0;

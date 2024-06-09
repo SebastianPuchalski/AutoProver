@@ -21,7 +21,7 @@ std::shared_ptr<Proposition> Constant::copy() const {
 void Constant::getVariableIds(std::vector<int>& variableIds) const {
 }
 
-uint64 Constant::evaluate(const std::vector<uint64>& varValues) const {
+uint64_t Constant::evaluate(const std::vector<uint64_t>& varValues) const {
     return value == TRUE ? ULLONG_MAX : 0;
 }
 

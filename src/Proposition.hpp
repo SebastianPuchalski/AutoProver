@@ -15,11 +15,11 @@ public:
     virtual std::shared_ptr<Proposition> copy() const = 0;
 
     virtual void getVariableIds(std::vector<int>& variableIds) const = 0;
-    virtual uint64 evaluate(const std::vector<uint64>& varValues) const = 0;
+    virtual uint64_t evaluate(const std::vector<uint64_t>& varValues) const = 0;
 
     std::shared_ptr<Proposition> toNormalForm(bool cnf) const;
-    std::shared_ptr<Proposition> toCNF() const;
-    std::shared_ptr<Proposition> toDNF() const;
+    std::shared_ptr<Proposition> toCnf() const;
+    std::shared_ptr<Proposition> toDnf() const;
 
     /* The following methods operate in-place, modifying the entire proposition tree.
      * They return a shared_ptr to the new proposition if the root is changed, rendering

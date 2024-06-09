@@ -42,7 +42,7 @@ public:
     virtual std::shared_ptr<Proposition> copy() const;
 
     virtual void getVariableIds(std::vector<int>& variableIds) const;
-    virtual uint64 evaluate(const std::vector<uint64>& varValues) const;
+    virtual uint64_t evaluate(const std::vector<uint64_t>& varValues) const;
     bool isCommutative() const;
     bool isAssociative() const;
 
