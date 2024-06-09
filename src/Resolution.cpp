@@ -7,8 +7,10 @@
 
 #include <vector>
 #include <cassert>
+#include <string>
 #include <iostream>
 #include <unordered_set>
+#include <unordered_map>
 #include <map>
 #include <chrono>
 
@@ -83,6 +85,17 @@ namespace Resolution {
 typedef int VariableId;
 typedef std::pair<VariableId, bool> Literal;
 typedef std::vector<Literal> Clause;
+typedef std::pair<BitClause, BitClause> ClausePair;
+typedef std::unordered_map<BitClause, ClausePair> Graph;
+
+struct ProofItem {
+	BitClause clause;
+	int index1;
+	int index2;
+};
+typedef std::vector<ProofItem> Proof;
+
+const bool RECORD_GRAPH = true;
 
 bool traverseLiteral(std::vector<Literal>& literals, const std::shared_ptr<Proposition>& literal, bool negation) {
 	if (literal->getType() == Proposition::UNARY &&
@@ -131,6 +144,17 @@ void cnfPropToVec(std::vector<Clause>& clauses, const std::shared_ptr<Propositio
 	// if there is at least one empty clause then proposition is False
 }
 
+std::string getVariableName(VariableId id) {
+	std::string result;
+	const int CHARACTER_COUNT = 'z' - 'a' + 1;
+	int character = id % CHARACTER_COUNT;
+	int number = id / CHARACTER_COUNT;
+	result += static_cast<char>('a' + character);
+	if (number > 0)
+		result += std::to_string(number);
+	return result;
+}
+
 void printCnf(const std::vector<Clause>& clauses) {
 	for (int i = 0; i < clauses.size(); i++) {
 		std::cout << "(";
@@ -140,12 +164,7 @@ void printCnf(const std::vector<Clause>& clauses) {
 			if (literal.second)
 				std::cout << "~";
 			VariableId id = literal.first;
-			const int LETTER_COUNT = 'z' - 'a' + 1;
-			int letter = id % LETTER_COUNT;
-			int number = id / LETTER_COUNT;
-			std::cout << static_cast<char>('a' + letter);
-			if (number > 0)
-				std::cout << number;
+			std::cout << getVariableName(id);
 			if (j + 1 < literals.size())
 				std::cout << " | ";
 		}
@@ -220,7 +239,8 @@ bool clausesToBitClauses(std::vector<BitClause>& bitClauses, const std::vector<C
 	return true;
 }
 
-bool resolve(std::vector<BitClause>& target, std::unordered_set<BitClause>& allClauses,
+bool resolve(std::vector<BitClause>& target,
+	         std::unordered_set<BitClause>& allClauses, Graph& graph,
 	         const std::vector<std::vector<BitClause>>& pBuckets,
 	         const std::vector<std::vector<BitClause>>& nBuckets) {
 	assert(pBuckets.size() == BitClause::VARIABLE_COUNT);
@@ -240,12 +260,25 @@ bool resolve(std::vector<BitClause>& target, std::unordered_set<BitClause>& allC
 						BitClause newClause;
 						newClause.pLiterals = pClause.pLiterals | nClause.pLiterals;
 						newClause.nLiterals = pClause.nLiterals | nClause.nLiterals;
-						if ((newClause.pLiterals | newClause.nLiterals) == 0)
+						if ((newClause.pLiterals | newClause.nLiterals) == 0) {
+							if (RECORD_GRAPH) {
+								uint64_t mask = static_cast<uint64_t>(1) << v;
+								pClause.pLiterals |= mask;
+								nClause.nLiterals |= mask;
+								graph[newClause] = ClausePair(pClause, nClause);
+							}
 							return true; // contradiction
+						}
 						if ((newClause.pLiterals & newClause.nLiterals) == 0) { // make sure it's ok
 							if (allClauses.find(newClause) == allClauses.end()) {
 								allClauses.insert(newClause);
 								target.push_back(newClause);
+								if (RECORD_GRAPH) {
+									uint64_t mask = static_cast<uint64_t>(1) << v;
+									pClause.pLiterals |= mask;
+									nClause.nLiterals |= mask;
+									graph[newClause] = ClausePair(pClause, nClause);
+								}
 							}
 						}
 					}
@@ -256,7 +289,7 @@ bool resolve(std::vector<BitClause>& target, std::unordered_set<BitClause>& allC
 	return false;
 }
 
-bool resolve(std::vector<BitClause> clauses) {
+bool resolve(Graph& graph, std::vector<BitClause> clauses) {
 	std::unordered_set<BitClause> allClauses;
 	BucketBuff procClauses;
 	BucketBuff currClauses;
@@ -275,9 +308,9 @@ bool resolve(std::vector<BitClause> clauses) {
 			currClauses.addClause(clause);
 		clauses.clear();
 
-		if (resolve(clauses, allClauses, currClauses.pBuckets, currClauses.nBuckets)) return true;
-		if (resolve(clauses, allClauses, currClauses.pBuckets, procClauses.nBuckets)) return true;
-		if (resolve(clauses, allClauses, procClauses.pBuckets, currClauses.nBuckets)) return true;
+		if (resolve(clauses, allClauses, graph, currClauses.pBuckets, procClauses.nBuckets)) return true;
+		if (resolve(clauses, allClauses, graph, procClauses.pBuckets, currClauses.nBuckets)) return true;
+		if (resolve(clauses, allClauses, graph, currClauses.pBuckets, currClauses.nBuckets)) return true;
 
 		for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
 			procClauses.pBuckets[v].insert(procClauses.pBuckets[v].end(),
@@ -292,6 +325,66 @@ bool resolve(std::vector<BitClause> clauses) {
 	}
 
 	return false;
+}
+
+int traverseProof(Proof& proof, const Graph& graph, BitClause clause) {
+	auto it = graph.find(clause);
+	ProofItem item;
+	item.clause = clause;
+	if (it != graph.end()) {
+		ClausePair pair = it->second;
+		item.index1 = traverseProof(proof, graph, pair.first);
+		item.index2 = traverseProof(proof, graph, pair.second);
+	}
+	else {
+		item.index1 = -1;
+		item.index2 = -1;
+	}
+	proof.push_back(item);
+	return proof.size() - 1;
+}
+
+std::string bitClauseToStr(BitClause clause) {
+	std::string result;
+	if ((clause.pLiterals | clause.nLiterals) == 0)
+		return "F";
+	const std::string op = " | ";
+	for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
+		auto varName = getVariableName(v);
+		uint64_t mask = static_cast<uint64_t>(1) << v;
+		if (clause.pLiterals & mask)
+			result += varName + op;
+		if (clause.nLiterals & mask)
+			result += std::string("~") + varName + op;
+	}
+	result.erase(result.length() - op.length());
+	return result;
+}
+
+std::string renderProof(const Graph& graph) {
+	Proof proof;
+	traverseProof(proof, graph, BitClause());
+
+	std::string result;
+	for (int i = 0; i < proof.size(); i++)
+	{
+		std::string line;
+		line += std::to_string(i + 1) + ". ";
+		if (proof[i].index1 == -1) {
+			assert(proof[i].index2 == -1);
+			line += "CNF: ";
+		}
+		else {
+			line += std::to_string(proof[i].index1 + 1);
+			line += std::string(" and ");
+			line += std::to_string(proof[i].index2 + 1);
+			line += ": ";
+		}
+		line.insert(line.length(), 25 - line.length(), ' ');
+		line += bitClauseToStr(proof[i].clause) + "\n";
+		result += line;
+	}
+	return result;
 }
 
 bool isValid(const std::shared_ptr<Proposition>& proposition) {
@@ -311,7 +404,8 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 	//printCnf(clauses);
 	//std::cout << std::endl;
 
-	squeezeVariableIds(clauses);
+	if(!RECORD_GRAPH)
+		squeezeVariableIds(clauses);
 	std::vector<BitClause> bitClauses;
 	if (!clausesToBitClauses(bitClauses, clauses))
 		throw std::runtime_error("Variable id is greater than 63");
@@ -320,11 +414,15 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-	auto result = resolve(bitClauses);
+	Graph graph;
+	auto result = resolve(graph, bitClauses);
 
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	std::cout << "Duration: " << (float)duration.count() / 1000 << std::endl;
+
+	if (result)
+		std::cout << renderProof(graph);
 
 	return result;
 }
