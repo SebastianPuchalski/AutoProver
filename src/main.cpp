@@ -42,7 +42,7 @@ void printConverterSettings(const Converter& converter) {
 
 int main() {
 	Converter converter;
-	converter.setParenthesisIfBinOpIsAssociative(true);
+	converter.setParenthesisIfBinOpIsAssociative(false);
 	printConverterSettings(converter);
 	cout << endl;
 

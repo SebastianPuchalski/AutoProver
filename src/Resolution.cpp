@@ -4,6 +4,7 @@
 #include "Constant.hpp"
 #include "UnaryOperator.hpp"
 #include "BinaryOperator.hpp"
+#include "Converter.hpp"
 
 #include <vector>
 #include <cassert>
@@ -365,25 +366,49 @@ std::string renderProof(const Graph& graph) {
 	Proof proof;
 	traverseProof(proof, graph, BitClause());
 
-	std::string result;
+	std::vector<std::string> lines;
+	size_t lineMaxLength = 0;
 	for (int i = 0; i < proof.size(); i++)
 	{
 		std::string line;
 		line += std::to_string(i + 1) + ". ";
 		if (proof[i].index1 == -1) {
 			assert(proof[i].index2 == -1);
-			line += "CNF: ";
+			line += std::string("(");
+			line += bitClauseToStr(proof[i].clause);
+			line += std::string(")");
 		}
 		else {
-			line += std::to_string(proof[i].index1 + 1);
-			line += std::string(" and ");
-			line += std::to_string(proof[i].index2 + 1);
-			line += ": ";
+			line += std::string("(");
+			line += bitClauseToStr(proof[proof[i].index1].clause);
+			line += std::string(") & (");
+			line += bitClauseToStr(proof[proof[i].index2].clause);
+			line += std::string(") -> (");
+			line += bitClauseToStr(proof[i].clause);
+			line += std::string(")");
 		}
-		line.insert(line.length(), 25 - line.length(), ' ');
-		line += bitClauseToStr(proof[i].clause) + "\n";
-		result += line;
+		lines.push_back(line);
+		lineMaxLength = std::max(lineMaxLength, line.length());
 	}
+	const int SPACE_SIZE = 4;
+	std::string result;
+	for (int i = 0; i < proof.size(); i++)
+	{
+		std::string line = lines[i];
+		line.insert(line.length(), (lineMaxLength + SPACE_SIZE) - line.length(), ' ');
+		if (proof[i].index1 == -1) {
+			line += "[cnf transformation 0]";
+		}
+		else {
+			line += std::string("[resolution ");
+			line += std::to_string(proof[i].index1 + 1);
+			line += std::string(", ");
+			line += std::to_string(proof[i].index2 + 1);
+			line += std::string("]");
+		}
+		result += line + "\n";
+	}
+	result += "Refutation found\n";
 	return result;
 }
 
@@ -419,10 +444,16 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	std::cout << "Duration: " << (float)duration.count() / 1000 << std::endl;
 
-	if (result)
-		std::cout << renderProof(graph);
+	if (result) {
+		std::string str = "Proof by refutation:\n";
+		str += "0. ";
+		Converter converter;
+		str += converter.toString(proposition) + "\n";
+		str += renderProof(graph);
+		std::cout << str;
+	}
+	std::cout << "Time elapsed: " << (float)duration.count() / 1000 << "s" << std::endl;
 
 	return result;
 }
