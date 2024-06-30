@@ -12,8 +12,18 @@
 #include <iostream>
 #include <unordered_set>
 #include <unordered_map>
+#include <set>
 #include <map>
 #include <chrono>
+#include <bit>
+
+//size_t p_prod = 0;
+//size_t p_onecomp = 0;
+//size_t p_new = 0;
+//size_t p_set = 0;
+//size_t p_main = 0;
+//size_t p_add = 0;
+//size_t p_remove = 0;
 
 struct BitClause {
 	static const int VARIABLE_COUNT = sizeof(uint64_t) * 8;
@@ -25,6 +35,41 @@ struct BitClause {
 	bool operator==(const BitClause& rhs) const {
 		return pLiterals == rhs.pLiterals &&
 			nLiterals == rhs.nLiterals;
+	}
+
+	bool operator!=(const BitClause& rhs) const {
+		return !operator==(rhs);
+	}
+
+	bool isSubset(const BitClause& rhs) const {
+		return (pLiterals & ~rhs.pLiterals) == 0 &&
+			(nLiterals & ~rhs.nLiterals) == 0;
+	}
+
+	bool isProperSubset(const BitClause& rhs) const {
+		return isSubset(rhs) && *this != rhs;
+	}
+
+	bool operator<(const BitClause& rhs) const {
+		/*auto popcount = [](uint64_t x) {
+			const uint64_t m1 = 0x5555555555555555;
+			const uint64_t m4 = 0x0f0f0f0f0f0f0f0f;
+			const uint64_t h01 = 0x0101010101010101;
+			const uint64_t m2 = 0x3333333333333333;
+			x -= (x >> 1) & m1;
+			x = (x & m2) + ((x >> 2) & m2);
+			x = (x + (x >> 4)) & m4;
+			return (x * h01) >> 56;
+			};
+		int oneCount = popcount(pLiterals | nLiterals);
+		int rhsOneCount = popcount(rhs.pLiterals | rhs.nLiterals);
+		assert(std::popcount(pLiterals | nLiterals) == oneCount);
+		assert(std::popcount(rhs.pLiterals | rhs.nLiterals) == rhsOneCount);
+		if (oneCount != rhsOneCount)
+			return oneCount < rhsOneCount;*/
+		if (pLiterals != rhs.pLiterals)
+			return pLiterals < rhs.pLiterals;
+		return nLiterals < rhs.nLiterals;
 	}
 };
 
@@ -56,8 +101,8 @@ namespace std {
 }
 
 struct BucketBuff {
-	std::vector<std::vector<BitClause>> pBuckets;
-	std::vector<std::vector<BitClause>> nBuckets;
+	std::vector<std::set<BitClause>> pBuckets;
+	std::vector<std::set<BitClause>> nBuckets;
 
 	BucketBuff() : pBuckets(BitClause::VARIABLE_COUNT),
 		           nBuckets(BitClause::VARIABLE_COUNT) {}
@@ -68,14 +113,36 @@ struct BucketBuff {
 		for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
 			uint64_t mask = static_cast<uint64_t>(1) << v;
 			if (clause.pLiterals & mask) {
+				//p_add++;
 				BitClause newClause = clause;
 				newClause.pLiterals &= ~mask;
-				pBuckets[v].push_back(newClause);
+				pBuckets[v].insert(newClause);
 			}
 			if (clause.nLiterals & mask) {
+				//p_add++;
 				BitClause newClause = clause;
 				newClause.nLiterals &= ~mask;
-				nBuckets[v].push_back(newClause);
+				nBuckets[v].insert(newClause);
+			}
+		}
+	}
+
+	void removeClause(BitClause clause) {
+		assert(pBuckets.size() == BitClause::VARIABLE_COUNT);
+		assert(nBuckets.size() == BitClause::VARIABLE_COUNT);
+		for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
+			uint64_t mask = static_cast<uint64_t>(1) << v;
+			if (clause.pLiterals & mask) {
+				//p_remove++;
+				BitClause removedClause = clause;
+				removedClause.pLiterals &= ~mask;
+				pBuckets[v].erase(removedClause);
+			}
+			if (clause.nLiterals & mask) {
+				//p_remove++;
+				BitClause removedClause = clause;
+				removedClause.nLiterals &= ~mask;
+				nBuckets[v].erase(removedClause);
 			}
 		}
 	}
@@ -83,20 +150,20 @@ struct BucketBuff {
 
 namespace Resolution {
 
-typedef int VariableId;
-typedef std::pair<VariableId, bool> Literal;
-typedef std::vector<Literal> Clause;
-typedef std::pair<BitClause, BitClause> ClausePair;
-typedef std::unordered_map<BitClause, ClausePair> Graph;
+using VariableId = int;
+using Literal = std::pair<VariableId, bool>;
+using Clause = std::vector<Literal>;
+using ClausePair = std::pair<BitClause, BitClause>;
+using Graph = std::unordered_map<BitClause, ClausePair>;
 
 struct ProofItem {
 	BitClause clause;
 	int index1;
 	int index2;
 };
-typedef std::vector<ProofItem> Proof;
+using Proof = std::vector<ProofItem>;
 
-const bool RECORD_GRAPH = true;
+const bool RECORD_GRAPH = false;
 
 bool traverseLiteral(std::vector<Literal>& literals, const std::shared_ptr<Proposition>& literal, bool negation) {
 	if (literal->getType() == Proposition::UNARY &&
@@ -224,62 +291,96 @@ void squeezeVariableIds(std::vector<Clause>& clauses) {
 
 bool clausesToBitClauses(std::vector<BitClause>& bitClauses, const std::vector<Clause>& clauses) {
 	for (auto& clause : clauses) {
-		BitClause bitClause;
+		BitClause newClause;
 		for (auto& literal : clause) {
 			if (literal.first >= sizeof(uint64_t) * 8)
 				return false;
 			uint64_t mask = static_cast<uint64_t>(1) << literal.first;
 			if (literal.second)
-				bitClause.nLiterals |= mask;
+				newClause.nLiterals |= mask;
 			else
-				bitClause.pLiterals |= mask;
+				newClause.pLiterals |= mask;
 		}
-		if ((bitClause.pLiterals & bitClause.nLiterals) == 0)
-			bitClauses.push_back(bitClause);
+		if ((newClause.pLiterals & newClause.nLiterals) == 0) {
+			bool notExists = true;
+			for (auto existingClause : bitClauses)
+				if (newClause == existingClause)
+					notExists = false;
+			if (notExists)
+				bitClauses.push_back(newClause);
+		}
+	}
+	for (int i = 0; i < bitClauses.size(); i++) {
+		for (int j = 0; j < bitClauses.size(); j++) {
+			if (bitClauses[j].isProperSubset(bitClauses[i])) {
+				std::swap(bitClauses[i], bitClauses.back());
+				bitClauses.pop_back();
+				i--;
+				break;
+			}
+		}
 	}
 	return true;
 }
 
 bool resolve(std::vector<BitClause>& target,
-	         std::unordered_set<BitClause>& allClauses, Graph& graph,
-	         const std::vector<std::vector<BitClause>>& pBuckets,
-	         const std::vector<std::vector<BitClause>>& nBuckets) {
+	         std::vector<BitClause>& removedClauses,
+			 Graph& graph,
+	         std::unordered_set<BitClause>& allClauses,
+			 std::vector<BitClause>& mainClauses,
+	         const std::vector<std::set<BitClause>>& pBuckets,
+	         const std::vector<std::set<BitClause>>& nBuckets) {
 	assert(pBuckets.size() == BitClause::VARIABLE_COUNT);
 	assert(nBuckets.size() == BitClause::VARIABLE_COUNT);
 	for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
-		const std::vector<BitClause>& pClauses = pBuckets[v];
-		const std::vector<BitClause>& nClauses = nBuckets[v];
-		const size_t TILE_SIZE = 256;
-		for (int i = 0; i < pClauses.size(); i += TILE_SIZE) {
-			for (int j = 0; j < nClauses.size(); j += TILE_SIZE) {
-				int xEnd = std::min(i + TILE_SIZE, pClauses.size());
-				int yEnd = std::min(j + TILE_SIZE, nClauses.size());
-				for (int x = i; x < xEnd; x++) {
-					for (int y = j; y < yEnd; y++) {
-						auto pClause = pClauses[x];
-						auto nClause = nClauses[y];
-						BitClause newClause;
-						newClause.pLiterals = pClause.pLiterals | nClause.pLiterals;
-						newClause.nLiterals = pClause.nLiterals | nClause.nLiterals;
-						if ((newClause.pLiterals | newClause.nLiterals) == 0) {
+		const auto& pClauses = pBuckets[v];
+		const auto& nClauses = nBuckets[v];
+		for (auto pIt = pClauses.begin(); pIt != pClauses.end(); pIt++) {
+			for (auto nIt = nClauses.begin(); nIt != nClauses.end(); nIt++) {
+				//p_prod++;
+				auto pClause = *pIt;
+				auto nClause = *nIt;
+				BitClause newClause;
+				newClause.pLiterals = pClause.pLiterals | nClause.pLiterals;
+				newClause.nLiterals = pClause.nLiterals | nClause.nLiterals;
+				if ((newClause.pLiterals | newClause.nLiterals) == 0) {
+					if (RECORD_GRAPH) {
+						uint64_t mask = static_cast<uint64_t>(1) << v;
+						pClause.pLiterals |= mask;
+						nClause.nLiterals |= mask;
+						graph[newClause] = ClausePair(pClause, nClause);
+					}
+					return true; // contradiction
+				}
+				if ((newClause.pLiterals & newClause.nLiterals) == 0) {
+					//p_onecomp++;
+					if (allClauses.find(newClause) == allClauses.end()) {
+						//p_new++;
+						allClauses.insert(newClause);
+						bool add = true;
+						for (int m = 0; m < mainClauses.size(); m++) {
+							//p_set++;
+							auto& mainClause = mainClauses[m];
+							if (mainClause.isSubset(newClause)) {
+								add = false;
+								break;
+							}
+							if (newClause.isProperSubset(mainClause)) {
+								removedClauses.push_back(mainClause);
+								std::swap(mainClause, mainClauses.back());
+								mainClauses.pop_back();
+								m--;
+							}
+						}
+						if (add) {
+							//p_main++;
+							mainClauses.push_back(newClause);
+							target.push_back(newClause);
 							if (RECORD_GRAPH) {
 								uint64_t mask = static_cast<uint64_t>(1) << v;
 								pClause.pLiterals |= mask;
 								nClause.nLiterals |= mask;
 								graph[newClause] = ClausePair(pClause, nClause);
-							}
-							return true; // contradiction
-						}
-						if ((newClause.pLiterals & newClause.nLiterals) == 0) { // make sure it's ok
-							if (allClauses.find(newClause) == allClauses.end()) {
-								allClauses.insert(newClause);
-								target.push_back(newClause);
-								if (RECORD_GRAPH) {
-									uint64_t mask = static_cast<uint64_t>(1) << v;
-									pClause.pLiterals |= mask;
-									nClause.nLiterals |= mask;
-									graph[newClause] = ClausePair(pClause, nClause);
-								}
 							}
 						}
 					}
@@ -292,8 +393,10 @@ bool resolve(std::vector<BitClause>& target,
 
 bool resolve(Graph& graph, std::vector<BitClause> clauses) {
 	std::unordered_set<BitClause> allClauses;
+	std::vector<BitClause> mainClauses;
 	BucketBuff procClauses;
 	BucketBuff currClauses;
+	std::vector<BitClause> removedClauses;
 
 	for (int i = 0; i < clauses.size(); i++) {
 		auto result = allClauses.insert(clauses[i]);
@@ -305,24 +408,53 @@ bool resolve(Graph& graph, std::vector<BitClause> clauses) {
 	}
 
 	while (clauses.size()) {
+		//std::cout << clauses.size() << " " << allClauses.size() << " " << mainClauses.size() << std::endl;
 		for (auto clause : clauses)
 			currClauses.addClause(clause);
 		clauses.clear();
 
-		if (resolve(clauses, allClauses, graph, currClauses.pBuckets, procClauses.nBuckets)) return true;
-		if (resolve(clauses, allClauses, graph, procClauses.pBuckets, currClauses.nBuckets)) return true;
-		if (resolve(clauses, allClauses, graph, currClauses.pBuckets, currClauses.nBuckets)) return true;
+		for (auto clause : removedClauses) {
+			currClauses.removeClause(clause);
+			procClauses.removeClause(clause);
+		}
+		removedClauses.clear();
+
+		if (resolve(clauses, removedClauses, graph, allClauses, mainClauses, currClauses.pBuckets, procClauses.nBuckets)) return true;
+		if (resolve(clauses, removedClauses, graph, allClauses, mainClauses, procClauses.pBuckets, currClauses.nBuckets)) return true;
+		if (resolve(clauses, removedClauses, graph, allClauses, mainClauses, currClauses.pBuckets, currClauses.nBuckets)) return true;
+
+		/*std::unordered_set<BitClause> removedClausesSet;
+		for (auto clause : removedClauses)
+			removedClausesSet.insert(clause);
+		for (int i = 0; i < clauses.size(); i++) {
+			if (removedClausesSet.find(clauses[i]) != removedClausesSet.end()) {
+				std::swap(clauses[i], clauses.back());
+				clauses.pop_back();
+				i--;
+				removedClausesSet.erase(clauses[i]);
+			}
+		}
+		removedClauses.clear();
+		removedClauses.insert(removedClauses.end(), removedClausesSet.begin(), removedClausesSet.end());
+		removedClausesSet.clear();*/
 
 		for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
-			procClauses.pBuckets[v].insert(procClauses.pBuckets[v].end(),
-										   currClauses.pBuckets[v].begin(),
+			procClauses.pBuckets[v].insert(currClauses.pBuckets[v].begin(),
 										   currClauses.pBuckets[v].end());
 			currClauses.pBuckets[v].clear();
-			procClauses.nBuckets[v].insert(procClauses.nBuckets[v].end(),
-										   currClauses.nBuckets[v].begin(),
+			procClauses.nBuckets[v].insert(currClauses.nBuckets[v].begin(),
 										   currClauses.nBuckets[v].end());
 			currClauses.nBuckets[v].clear();
 		}
+
+		/*std::cout << "p_prod: " << p_prod << std::endl;
+		std::cout << "p_onecomp: " << p_onecomp << std::endl;
+		std::cout << "p_new: " << p_new << std::endl;
+		std::cout << "p_set: " << p_set << std::endl;
+		std::cout << "p_main: " << p_main << std::endl;
+		std::cout << "p_add: " << p_add << std::endl;
+		std::cout << "p_remove: " << p_remove << std::endl;
+		std::cout << std::endl;*/
 	}
 
 	return false;
@@ -445,7 +577,7 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-	if (result) {
+	if (RECORD_GRAPH && result) {
 		std::string str = "Proof by refutation:\n";
 		str += "0. ";
 		Converter converter;
@@ -453,7 +585,7 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 		str += renderProof(graph);
 		std::cout << str;
 	}
-	std::cout << "Time elapsed: " << (float)duration.count() / 1000 << "s" << std::endl;
+	std::cout << "Elapsed time: " << (float)duration.count() / 1000 << "s" << std::endl;
 
 	return result;
 }
