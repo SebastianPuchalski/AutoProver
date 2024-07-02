@@ -20,7 +20,8 @@
 size_t p_prod = 0;
 size_t p_onecomp = 0;
 size_t p_new = 0;
-size_t p_set = 0;
+size_t p_exists = 0;
+size_t p_removetest = 0;
 size_t p_main = 0;
 size_t p_add = 0;
 size_t p_remove = 0;
@@ -323,7 +324,7 @@ bool clausesToBitClauses(std::vector<BitClause>& bitClauses, const std::vector<C
 	return true;
 }
 
-bool resolve(std::vector<BitClause>& addedClauses,
+bool resolve(std::set<BitClause>& currClauses,
 	         std::vector<BitClause>& removedClauses,
 			 Graph& graph,
 	         std::unordered_set<BitClause>& allClauses,
@@ -361,24 +362,38 @@ bool resolve(std::vector<BitClause>& addedClauses,
 						p_new++;
 						allClauses.insert(newClause);
 						bool add = true;
-						for (int m = 0; m < mainClauses.size(); m++) {
-							p_set++;
-							auto& mainClause = mainClauses[m];
+						/*for (auto it = currClauses.begin(); it != currClauses.end(); it++) {
+							p_exists++;
+							auto& mainClause = *it;
 							if (mainClause.isSubset(newClause)) {
 								add = false;
 								break;
 							}
-							if (newClause.isProperSubset(mainClause)) {
-								removedClauses.push_back(mainClause);
-								std::swap(mainClause, mainClauses.back());
-								mainClauses.pop_back();
-								m--;
+						}*/
+						if (add) {
+							for (int m = 0; m < mainClauses.size(); m++) {
+								p_exists++;
+								auto& mainClause = mainClauses[m];
+								if (mainClause.isSubset(newClause)) {
+									add = false;
+									break;
+								}
 							}
 						}
 						if (add) {
 							p_main++;
+							for (int m = 0; m < mainClauses.size(); m++) {
+								p_removetest++;
+								auto& mainClause = mainClauses[m];
+								if (newClause.isProperSubset(mainClause)) {
+									removedClauses.push_back(mainClause);
+									std::swap(mainClause, mainClauses.back());
+									mainClauses.pop_back();
+									m--;
+								}
+							}
 							mainClauses.push_back(newClause);
-							addedClauses.push_back(newClause);
+							currClauses.insert(newClause);
 							if (RECORD_GRAPH) {
 								if (positive)
 									procClause.nLiterals |= mask;
@@ -395,37 +410,32 @@ bool resolve(std::vector<BitClause>& addedClauses,
 	return false;
 }
 
-bool resolve(Graph& graph, std::vector<BitClause> addedClauses) {
-	std::vector<BitClause> removedClauses;
+bool resolve(Graph& graph, const std::vector<BitClause>& clauses) {
 	std::unordered_set<BitClause> allClauses;
 	std::vector<BitClause> mainClauses;
 	BucketBuff procClauses;
 	std::set<BitClause> currClauses;
+	std::vector<BitClause> removedClauses;
 
-	for (int i = 0; i < addedClauses.size(); i++) {
-		auto result = allClauses.insert(addedClauses[i]);
-		if (!result.second) {
-			std::swap(addedClauses[i], addedClauses.back());
-			addedClauses.pop_back();
-			i--;
+	for (int i = 0; i < clauses.size(); i++) {
+		if (allClauses.insert(clauses[i]).second) {
+			mainClauses.push_back(clauses[i]);
+			currClauses.insert(clauses[i]);
 		}
 	}
 
-	while (addedClauses.size() || currClauses.size()) {
-		for (auto clause : addedClauses)
-			currClauses.insert(clause);
-		addedClauses.clear();
-
+	while (currClauses.size()) {
 		for (auto clause : removedClauses) {
-			currClauses.erase(clause);
-			procClauses.removeClause(clause);
+			auto removedCount = currClauses.erase(clause);
+			if(removedCount == 0)
+				procClauses.removeClause(clause);
 		}
 		removedClauses.clear();
 
 		auto it = currClauses.begin();
 		BitClause clause = *it;
 		currClauses.erase(it);
-		if (resolve(addedClauses, removedClauses, graph,
+		if (resolve(currClauses, removedClauses, graph,
 			allClauses, mainClauses, procClauses, clause))
 			return true;
 		procClauses.addClause(clause);
@@ -559,7 +569,8 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 	/*std::cout << "p_prod: " << p_prod << std::endl;
 	std::cout << "p_onecomp: " << p_onecomp << std::endl;
 	std::cout << "p_new: " << p_new << std::endl;
-	std::cout << "p_set: " << p_set << std::endl;
+	std::cout << "p_exists: " << p_exists << std::endl;
+	std::cout << "p_removetest: " << p_removetest << std::endl;
 	std::cout << "p_main: " << p_main << std::endl;
 	std::cout << "p_add: " << p_add << std::endl;
 	std::cout << "p_remove: " << p_remove << std::endl;
