@@ -65,7 +65,7 @@ int main() {
 				cout << "Model checking: contingent proposition\n";
 
 			bool valid = Resolution::isValid(proposition);
-			cout << "Resolution: " << (valid ? "valid" : "not valid") << endl;
+			//cout << "Resolution: " << (valid ? "valid" : "not valid") << endl;
 
 			/*cout << "CNF: " << converter.toString(proposition->toCNF()) << endl;
 			cout << "DNF: " << converter.toString(proposition->toDNF()) << endl;*/

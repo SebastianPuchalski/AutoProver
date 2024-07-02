@@ -163,7 +163,7 @@ struct ProofItem {
 };
 using Proof = std::vector<ProofItem>;
 
-const bool RECORD_GRAPH = false;
+const bool RECORD_GRAPH = true;
 
 bool traverseLiteral(std::vector<Literal>& literals, const std::shared_ptr<Proposition>& literal, bool negation) {
 	if (literal->getType() == Proposition::UNARY &&
@@ -435,6 +435,9 @@ bool resolve(Graph& graph, std::vector<BitClause> addedClauses) {
 }
 
 int traverseProof(Proof& proof, const Graph& graph, BitClause clause) {
+	for (int i = 0; i < proof.size(); i++)
+		if (proof[i].clause == clause)
+			return i;
 	auto it = graph.find(clause);
 	ProofItem item;
 	item.clause = clause;
@@ -548,27 +551,32 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 	Graph graph;
 	auto result = resolve(graph, bitClauses);
 
-	std::cout << "p_prod: " << p_prod << std::endl;
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+	std::cout << "Resolution: " << (result ? "valid" : "not valid") << std::endl;
+
+	/*std::cout << "p_prod: " << p_prod << std::endl;
 	std::cout << "p_onecomp: " << p_onecomp << std::endl;
 	std::cout << "p_new: " << p_new << std::endl;
 	std::cout << "p_set: " << p_set << std::endl;
 	std::cout << "p_main: " << p_main << std::endl;
 	std::cout << "p_add: " << p_add << std::endl;
 	std::cout << "p_remove: " << p_remove << std::endl;
-	std::cout << std::endl;
-
-	auto end = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	std::cout << std::endl;*/
 
 	if (RECORD_GRAPH && result) {
-		std::string str = "Proof by refutation:\n";
+		std::string str = "\nProof by refutation:\n";
 		str += "0. ";
 		Converter converter;
 		str += converter.toString(proposition) + "\n";
 		str += renderProof(graph);
 		std::cout << str;
 	}
-	std::cout << "Elapsed time: " << (float)duration.count() / 1000 << "s" << std::endl;
+
+	std::cout << "Elapsed time: ";
+	std::cout << std::fixed << std::setprecision(6);
+	std::cout << (double)duration.count() / 1000000 << "s" << std::endl;
 
 	return result;
 }
