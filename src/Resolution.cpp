@@ -18,11 +18,9 @@
 #include <bit>
 
 size_t p_prod = 0;
-size_t p_onecomp = 0;
-size_t p_new = 0;
+size_t p_current = 0;
 size_t p_exists = 0;
 size_t p_removetest = 0;
-size_t p_main = 0;
 size_t p_add = 0;
 size_t p_remove = 0;
 
@@ -324,11 +322,7 @@ bool clausesToBitClauses(std::vector<BitClause>& bitClauses, const std::vector<C
 	return true;
 }
 
-bool resolve(std::set<BitClause>& currClauses,
-	         std::vector<BitClause>& removedClauses,
-			 Graph& graph,
-	         std::unordered_set<BitClause>& allClauses,
-			 std::vector<BitClause>& mainClauses,
+bool resolve(std::set<BitClause>& currClauses, Graph& graph,
 	         const BucketBuff& procClauses, BitClause clause) {
 	for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
 		uint64_t mask = static_cast<uint64_t>(1) << v;
@@ -357,51 +351,14 @@ bool resolve(std::set<BitClause>& currClauses,
 					return true; // contradiction
 				}
 				if ((newClause.pLiterals & newClause.nLiterals) == 0) {
-					p_onecomp++;
-					if (allClauses.find(newClause) == allClauses.end()) {
-						p_new++;
-						allClauses.insert(newClause);
-						bool add = true;
-						/*for (auto it = currClauses.begin(); it != currClauses.end(); it++) {
-							p_exists++;
-							auto& mainClause = *it;
-							if (mainClause.isSubset(newClause)) {
-								add = false;
-								break;
-							}
-						}*/
-						if (add) {
-							for (int m = 0; m < mainClauses.size(); m++) {
-								p_exists++;
-								auto& mainClause = mainClauses[m];
-								if (mainClause.isSubset(newClause)) {
-									add = false;
-									break;
-								}
-							}
-						}
-						if (add) {
-							p_main++;
-							for (int m = 0; m < mainClauses.size(); m++) {
-								p_removetest++;
-								auto& mainClause = mainClauses[m];
-								if (newClause.isProperSubset(mainClause)) {
-									removedClauses.push_back(mainClause);
-									std::swap(mainClause, mainClauses.back());
-									mainClauses.pop_back();
-									m--;
-								}
-							}
-							mainClauses.push_back(newClause);
-							currClauses.insert(newClause);
-							if (RECORD_GRAPH) {
-								if (positive)
-									procClause.nLiterals |= mask;
-								else
-									procClause.pLiterals |= mask;
-								graph[newClause] = ClausePair(procClause, clause);
-							}
-						}
+					p_current++;
+					currClauses.insert(newClause);
+					if (RECORD_GRAPH) {
+						if (positive)
+							procClause.nLiterals |= mask;
+						else
+							procClause.pLiterals |= mask;
+						graph[newClause] = ClausePair(procClause, clause);
 					}
 				}
 			}
@@ -411,34 +368,42 @@ bool resolve(std::set<BitClause>& currClauses,
 }
 
 bool resolve(Graph& graph, const std::vector<BitClause>& clauses) {
-	std::unordered_set<BitClause> allClauses;
-	std::vector<BitClause> mainClauses;
-	BucketBuff procClauses;
+	std::vector<BitClause> procClauses;
+	BucketBuff procClausesB;
 	std::set<BitClause> currClauses;
-	std::vector<BitClause> removedClauses;
 
-	for (int i = 0; i < clauses.size(); i++) {
-		if (allClauses.insert(clauses[i]).second) {
-			mainClauses.push_back(clauses[i]);
-			currClauses.insert(clauses[i]);
-		}
-	}
+	for (auto clause : clauses)
+		currClauses.insert(clause);
 
 	while (currClauses.size()) {
-		for (auto clause : removedClauses) {
-			auto removedCount = currClauses.erase(clause);
-			if(removedCount == 0)
-				procClauses.removeClause(clause);
-		}
-		removedClauses.clear();
-
 		auto it = currClauses.begin();
 		BitClause clause = *it;
 		currClauses.erase(it);
-		if (resolve(currClauses, removedClauses, graph,
-			allClauses, mainClauses, procClauses, clause))
-			return true;
-		procClauses.addClause(clause);
+
+		bool add = true;
+		for (int i = 0; i < procClauses.size(); i++) {
+			p_exists++;
+			if (procClauses[i].isSubset(clause)) {
+				add = false;
+				break;
+			}
+		}
+		if (add) {
+			for (int i = 0; i < procClauses.size(); i++) {
+				p_removetest++;
+				auto& procClause = procClauses[i];
+				if (clause.isProperSubset(procClause)) {
+					procClausesB.removeClause(procClause);
+					std::swap(procClause, procClauses.back());
+					procClauses.pop_back();
+					i--;
+				}
+			}
+			if (resolve(currClauses, graph, procClausesB, clause))
+				return true;
+			procClausesB.addClause(clause);
+			procClauses.push_back(clause);
+		}
 	}
 
 	return false;
@@ -567,11 +532,9 @@ bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
 	std::cout << "Resolution: " << (result ? "valid" : "not valid") << std::endl;
 
 	/*std::cout << "p_prod: " << p_prod << std::endl;
-	std::cout << "p_onecomp: " << p_onecomp << std::endl;
-	std::cout << "p_new: " << p_new << std::endl;
+	std::cout << "p_current: " << p_current << std::endl;
 	std::cout << "p_exists: " << p_exists << std::endl;
 	std::cout << "p_removetest: " << p_removetest << std::endl;
-	std::cout << "p_main: " << p_main << std::endl;
 	std::cout << "p_add: " << p_add << std::endl;
 	std::cout << "p_remove: " << p_remove << std::endl;
 	std::cout << std::endl;*/
