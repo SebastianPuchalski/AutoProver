@@ -5,6 +5,7 @@
 #include "Converter.hpp"
 #include "ModelChecker.hpp"
 #include "Resolution.hpp"
+#include "ForwardChaining.hpp"
 
 #include <iostream>
 
@@ -38,6 +39,19 @@ void printConverterSettings(const Converter& converter) {
 	converter.getStringsForSymbols(trueConstant, falseConstant, openingParenthesis, closingParenthesis, whitespace);
 	cout << "Constants: " << trueConstant << " " << falseConstant << endl;
 	cout << "Parenthesis: " << openingParenthesis << " " << closingParenthesis << endl;
+}
+
+void testForwardChaining() {
+	ForwardChainingKB kb;
+	kb.addFact(1);
+	kb.addFact(2);
+	kb.addClause(ForwardChainingKB::DefiniteClause({ 5 }, 6));
+	kb.addClause(ForwardChainingKB::DefiniteClause({ 3, 4 }, 5));
+	kb.addClause(ForwardChainingKB::DefiniteClause({ 2, 3 }, 4));
+	kb.addClause(ForwardChainingKB::DefiniteClause({ 1, 5 }, 3));
+	kb.addClause(ForwardChainingKB::DefiniteClause({ 1, 2 }, 3));
+	bool result = kb.isEntailed(6);
+	cout << "Chaining result: " << (result ? "Entailed" : "Not entailed") << endl;
 }
 
 int main() {
@@ -75,6 +89,8 @@ int main() {
 		}
 		cout << endl;
 	}
+
+	//testForwardChaining();
 
 	return 0;
 }
