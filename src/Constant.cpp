@@ -14,8 +14,19 @@ void Constant::setValue(Value value) {
     this->value = value;
 }
 
-std::shared_ptr<Proposition> Constant::copy() const {
+bool Constant::isEquivalent(PropositionSP proposition) const {
+    if (!proposition || proposition->getType() != Proposition::CONSTANT)
+        return false;
+    auto prop = std::static_pointer_cast<Constant>(proposition);
+    return value == prop->value;
+}
+
+PropositionSP Constant::copy() const {
     return std::make_shared<Constant>(*this);
+}
+
+int Constant::getLength() const {
+    return 1;
 }
 
 void Constant::getVariableIds(std::vector<int>& variableIds) const {
@@ -25,26 +36,26 @@ uint64_t Constant::evaluate(const std::vector<uint64_t>& varValues) const {
     return value == TRUE ? ULLONG_MAX : 0;
 }
 
-std::shared_ptr<Proposition> Constant::transformXnorToImp() {
+PropositionSP Constant::transformXnorToImp() {
     return nullptr;
 }
 
-std::shared_ptr<Proposition> Constant::transformImpToOr() {
+PropositionSP Constant::transformImpToOr() {
     return nullptr;
 }
 
-std::shared_ptr<Proposition> Constant::eliminateDoubleNot(bool& anyChange) {
+PropositionSP Constant::eliminateDoubleNot(bool& anyChange) {
     return nullptr;
 }
 
-std::shared_ptr<Proposition> Constant::moveNotInwardsOp(int binaryOp, bool& anyChange) {
+PropositionSP Constant::moveNotInwardsOp(int binaryOp, bool& anyChange) {
     return nullptr;
 }
 
-std::shared_ptr<Proposition> Constant::distributeOrAnd(bool orOverAnd, bool& anyChange) {
+PropositionSP Constant::distributeOrAnd(bool orOverAnd, bool& anyChange) {
     return nullptr;
 }
 
-std::shared_ptr<Proposition> Constant::reduce(bool& anyChange) {
+PropositionSP Constant::reduce(bool& anyChange) {
     return nullptr;
 }

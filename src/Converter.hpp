@@ -31,8 +31,8 @@ public:
 
 	void setParenthesisIfBinOpIsAssociative(bool skip);
 
-	std::shared_ptr<Proposition> fromString(const std::string& str);
-	std::string toString(std::shared_ptr<Proposition> proposition, bool addParenthesis = false);
+	PropositionSP fromString(const std::string& str);
+	std::string toString(PropositionSP proposition, bool addParenthesis = false);
 
 private:
 	std::vector<std::string> variables;
@@ -66,5 +66,5 @@ private:
 
 	void prepareStringToTokenMap();
 	bool pairParentheses(std::vector<Token>& tokens);
-	std::shared_ptr<Proposition> fromTokens(std::vector<Token>::iterator begin, std::vector<Token>::iterator end);
+	PropositionSP fromTokens(std::vector<Token>::iterator begin, std::vector<Token>::iterator end);
 };

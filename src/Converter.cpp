@@ -136,7 +136,7 @@ void Converter::setParenthesisIfBinOpIsAssociative(bool skip) {
 	skipParenthesisIfAssociative = skip;
 }
 
-std::shared_ptr<Proposition> Converter::fromString(const std::string& str) {
+PropositionSP Converter::fromString(const std::string& str) {
 	if(stringToTokenMap.empty())
 		prepareStringToTokenMap();
 
@@ -144,15 +144,15 @@ std::shared_ptr<Proposition> Converter::fromString(const std::string& str) {
 
 	int error = stringToTokens(tokens, str, stringToTokenMap, whitespace);
 	if (error) 
-		return std::shared_ptr<Proposition>();
+		return PropositionSP();
 
 	if(!pairParentheses(tokens))
-		return std::shared_ptr<Proposition>();
+		return PropositionSP();
 
 	return fromTokens(tokens.begin(), tokens.end());
 }
 
-std::string Converter::toString(std::shared_ptr<Proposition> proposition, bool addParenthesis) {
+std::string Converter::toString(PropositionSP proposition, bool addParenthesis) {
 	Proposition::Type type = proposition->getType();
 
 	if (type == Proposition::VARIABLE) {
@@ -276,10 +276,10 @@ bool Converter::pairParentheses(std::vector<Token>& tokens) {
 	return stack.empty();
 }
 
-std::shared_ptr<Proposition> Converter::fromTokens(std::vector<Token>::iterator begin,
+PropositionSP Converter::fromTokens(std::vector<Token>::iterator begin,
 	                                               std::vector<Token>::iterator end) {
 	if (end - begin <= 0)
-		return std::shared_ptr<Proposition>();
+		return PropositionSP();
 
 	if ((*begin).type == Token::OPEN_PAR && end - 1 - begin == (*begin).value) {
 		assert((*(end - 1)).type == Token::CLOSE_PAR);
@@ -295,7 +295,7 @@ std::shared_ptr<Proposition> Converter::fromTokens(std::vector<Token>::iterator 
 			return std::make_shared<Constant>((Constant::Value)(*begin).value);
 		}
 		else {
-			return std::shared_ptr<Proposition>();
+			return PropositionSP();
 		}
 	}
 
@@ -323,20 +323,20 @@ std::shared_ptr<Proposition> Converter::fromTokens(std::vector<Token>::iterator 
 	}
 
 	if (binary != end) {
-		std::shared_ptr<Proposition> left = fromTokens(begin, binary);
-		std::shared_ptr<Proposition> right = fromTokens(binary + 1, end);
+		PropositionSP left = fromTokens(begin, binary);
+		PropositionSP right = fromTokens(binary + 1, end);
 		if(left && right)
 			return std::make_shared<BinaryOperator>(left, (BinaryOperator::Op)(*binary).value, right);
-		return std::shared_ptr<Proposition>();
+		return PropositionSP();
 	}
 	if (unary != end) {
 		if (unary == begin) {
-			std::shared_ptr<Proposition> operand = fromTokens(unary + 1, end);
+			PropositionSP operand = fromTokens(unary + 1, end);
 			if (operand)
 				return std::make_shared<UnaryOperator>(operand, (UnaryOperator::Op)(*unary).value);
 		}
-		return std::shared_ptr<Proposition>();
+		return PropositionSP();
 	}
 
-	return std::shared_ptr<Proposition>();
+	return PropositionSP();
 }

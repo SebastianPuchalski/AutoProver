@@ -28,33 +28,35 @@ public:
         NOR, XNOR, NB, RIMP, NA, IMP, NAND, TRUE
     };
 
-    BinaryOperator(std::shared_ptr<Proposition> left, Op op,
-        std::shared_ptr<Proposition> right);
+    BinaryOperator(PropositionSP left, Op op,
+        PropositionSP right);
 
     virtual Type getType() const;
-    std::shared_ptr<Proposition> getLeft() const;
-    std::shared_ptr<Proposition> getRight() const;
+    PropositionSP getLeft() const;
+    PropositionSP getRight() const;
     Op getOp() const;
-    void setLeft(std::shared_ptr<Proposition> left);
-    void setRight(std::shared_ptr<Proposition> right);
+    void setLeft(PropositionSP left);
+    void setRight(PropositionSP right);
     void setOp(Op op);
 
-    virtual std::shared_ptr<Proposition> copy() const;
+    virtual bool isEquivalent(PropositionSP proposition) const;
+    virtual PropositionSP copy() const;
 
+    virtual int getLength() const;
     virtual void getVariableIds(std::vector<int>& variableIds) const;
     virtual uint64_t evaluate(const std::vector<uint64_t>& varValues) const;
     bool isCommutative() const;
     bool isAssociative() const;
 
 private:
-    std::shared_ptr<Proposition> left;
-    std::shared_ptr<Proposition> right;
+    PropositionSP left;
+    PropositionSP right;
     Op op;
 
-    virtual std::shared_ptr<Proposition> transformXnorToImp();
-    virtual std::shared_ptr<Proposition> transformImpToOr();
-    virtual std::shared_ptr<Proposition> eliminateDoubleNot(bool& anyChange);
-    virtual std::shared_ptr<Proposition> moveNotInwardsOp(int binaryOp, bool& anyChange);
-    virtual std::shared_ptr<Proposition> distributeOrAnd(bool orOverAnd, bool& anyChange);
-    virtual std::shared_ptr<Proposition> reduce(bool& anyChange);
+    virtual PropositionSP transformXnorToImp();
+    virtual PropositionSP transformImpToOr();
+    virtual PropositionSP eliminateDoubleNot(bool& anyChange);
+    virtual PropositionSP moveNotInwardsOp(int binaryOp, bool& anyChange);
+    virtual PropositionSP distributeOrAnd(bool orOverAnd, bool& anyChange);
+    virtual PropositionSP reduce(bool& anyChange);
 };

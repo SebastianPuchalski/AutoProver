@@ -16,18 +16,20 @@ public:
     Value getValue() const;
     void setValue(Value value);
 
-    virtual std::shared_ptr<Proposition> copy() const;
+    virtual bool isEquivalent(PropositionSP proposition) const;
+    virtual PropositionSP copy() const;
 
+    virtual int getLength() const;
     virtual void getVariableIds(std::vector<int>& variableIds) const;
     virtual uint64_t evaluate(const std::vector<uint64_t>& varValues) const;
 
 private:
     Value value;
 
-    virtual std::shared_ptr<Proposition> transformXnorToImp();
-    virtual std::shared_ptr<Proposition> transformImpToOr();
-    virtual std::shared_ptr<Proposition> eliminateDoubleNot(bool& anyChange);
-    virtual std::shared_ptr<Proposition> moveNotInwardsOp(int binaryOp, bool& anyChange);
-    virtual std::shared_ptr<Proposition> distributeOrAnd(bool orOverAnd, bool& anyChange);
-    virtual std::shared_ptr<Proposition> reduce(bool& anyChange);
+    virtual PropositionSP transformXnorToImp();
+    virtual PropositionSP transformImpToOr();
+    virtual PropositionSP eliminateDoubleNot(bool& anyChange);
+    virtual PropositionSP moveNotInwardsOp(int binaryOp, bool& anyChange);
+    virtual PropositionSP distributeOrAnd(bool orOverAnd, bool& anyChange);
+    virtual PropositionSP reduce(bool& anyChange);
 };

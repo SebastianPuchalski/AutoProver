@@ -12,8 +12,10 @@ public:
     enum Type {VARIABLE, CONSTANT, UNARY, BINARY};
     virtual Type getType() const = 0;
 
+    virtual bool isEquivalent(std::shared_ptr<Proposition> proposition) const = 0;
     virtual std::shared_ptr<Proposition> copy() const = 0;
 
+    virtual int getLength() const = 0;
     virtual void getVariableIds(std::vector<int>& variableIds) const = 0;
     virtual uint64_t evaluate(const std::vector<uint64_t>& varValues) const = 0;
 
@@ -32,3 +34,5 @@ public:
     virtual std::shared_ptr<Proposition> distributeOrAnd(bool orOverAnd, bool& anyChange) = 0; // it may cause redundancy (fix it!)
     virtual std::shared_ptr<Proposition> reduce(bool& anyChange) = 0;
 };
+
+using PropositionSP = std::shared_ptr<Proposition>;

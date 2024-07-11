@@ -25,6 +25,7 @@
     <ClCompile Include="..\src\Converter.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\ModelChecker.cpp" />
+    <ClCompile Include="..\src\NaturalDeduction.cpp" />
     <ClCompile Include="..\src\Proposition.cpp" />
     <ClCompile Include="..\src\Resolution.cpp" />
     <ClCompile Include="..\src\UnaryOperator.cpp" />
@@ -37,6 +38,7 @@
     <ClInclude Include="..\src\Constant.hpp" />
     <ClInclude Include="..\src\Converter.hpp" />
     <ClInclude Include="..\src\ModelChecker.hpp" />
+    <ClInclude Include="..\src\NaturalDeduction.hpp" />
     <ClInclude Include="..\src\Proposition.hpp" />
     <ClInclude Include="..\src\Resolution.hpp" />
     <ClInclude Include="..\src\UnaryOperator.hpp" />

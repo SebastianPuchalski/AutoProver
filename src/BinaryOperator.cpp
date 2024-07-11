@@ -6,19 +6,19 @@
 
 #include <cassert>
 
-BinaryOperator::BinaryOperator(std::shared_ptr<Proposition> left, Op op,
-    std::shared_ptr<Proposition> right) :
+BinaryOperator::BinaryOperator(PropositionSP left, Op op,
+    PropositionSP right) :
     left(left), op(op), right(right) {}
 
 BinaryOperator::Type BinaryOperator::getType() const {
     return BINARY;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::getLeft() const {
+PropositionSP BinaryOperator::getLeft() const {
     return left;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::getRight() const {
+PropositionSP BinaryOperator::getRight() const {
     return right;
 }
 
@@ -26,11 +26,11 @@ BinaryOperator::Op BinaryOperator::getOp() const {
     return op;
 }
 
-void BinaryOperator::setLeft(std::shared_ptr<Proposition> left) {
+void BinaryOperator::setLeft(PropositionSP left) {
     this->left = left;
 }
 
-void BinaryOperator::setRight(std::shared_ptr<Proposition> right) {
+void BinaryOperator::setRight(PropositionSP right) {
     this->right = right;
 }
 
@@ -38,8 +38,21 @@ void BinaryOperator::setOp(Op op) {
     this->op = op;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::copy() const {
+bool BinaryOperator::isEquivalent(PropositionSP proposition) const {
+    if (!proposition || proposition->getType() != Proposition::BINARY)
+        return false;
+    auto prop = std::static_pointer_cast<BinaryOperator>(proposition);
+    if (op != prop->op)
+        return false;
+    return left->isEquivalent(prop->left) && right->isEquivalent(prop->right);
+}
+
+PropositionSP BinaryOperator::copy() const {
     return std::make_shared<BinaryOperator>(left->copy(), op, right->copy());
+}
+
+int BinaryOperator::getLength() const {
+    return left->getLength() + right->getLength() + 1;
 }
 
 void BinaryOperator::getVariableIds(std::vector<int>& variableIds) const {
@@ -99,7 +112,7 @@ bool BinaryOperator::isAssociative() const {
         op == XOR || op == OR || op == XNOR || op == TRUE;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::transformXnorToImp() {
+PropositionSP BinaryOperator::transformXnorToImp() {
     auto transLeft = left->transformXnorToImp();
     auto transRight = right->transformXnorToImp();
     if (transLeft)
@@ -115,7 +128,7 @@ std::shared_ptr<Proposition> BinaryOperator::transformXnorToImp() {
     return nullptr;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::transformImpToOr() {
+PropositionSP BinaryOperator::transformImpToOr() {
     auto transLeft = left->transformImpToOr();
     auto transRight = right->transformImpToOr();
     if (transLeft)
@@ -130,7 +143,7 @@ std::shared_ptr<Proposition> BinaryOperator::transformImpToOr() {
     return nullptr;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::eliminateDoubleNot(bool& anyChange) {
+PropositionSP BinaryOperator::eliminateDoubleNot(bool& anyChange) {
     auto elimLeft = left->eliminateDoubleNot(anyChange);
     auto elimRight = right->eliminateDoubleNot(anyChange);
     if (elimLeft)
@@ -140,7 +153,7 @@ std::shared_ptr<Proposition> BinaryOperator::eliminateDoubleNot(bool& anyChange)
     return nullptr;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::moveNotInwardsOp(int binaryOp, bool& anyChange) {
+PropositionSP BinaryOperator::moveNotInwardsOp(int binaryOp, bool& anyChange) {
     auto movedLeft = left->moveNotInwardsOp(binaryOp, anyChange);
     auto movedRight = right->moveNotInwardsOp(binaryOp, anyChange);
     if (movedLeft)
@@ -150,7 +163,7 @@ std::shared_ptr<Proposition> BinaryOperator::moveNotInwardsOp(int binaryOp, bool
     return nullptr;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::distributeOrAnd(bool orOverAnd, bool& anyChange) {
+PropositionSP BinaryOperator::distributeOrAnd(bool orOverAnd, bool& anyChange) {
     Op over, under;
     if (orOverAnd) {
         over = OR;
@@ -165,8 +178,8 @@ std::shared_ptr<Proposition> BinaryOperator::distributeOrAnd(bool orOverAnd, boo
             auto binaryRight = std::static_pointer_cast<BinaryOperator>(right);
             if (binaryRight->getOp() == under) {
                 anyChange = true;
-                std::shared_ptr<Proposition> l = std::make_shared<BinaryOperator>(left, over, binaryRight->left);
-                std::shared_ptr<Proposition> r = std::make_shared<BinaryOperator>(left->copy(), over, binaryRight->right);
+                PropositionSP l = std::make_shared<BinaryOperator>(left, over, binaryRight->left);
+                PropositionSP r = std::make_shared<BinaryOperator>(left->copy(), over, binaryRight->right);
                 auto distLeft = l->distributeOrAnd(orOverAnd, anyChange);
                 if (distLeft)
                     l = distLeft;
@@ -180,8 +193,8 @@ std::shared_ptr<Proposition> BinaryOperator::distributeOrAnd(bool orOverAnd, boo
             auto binaryLeft = std::static_pointer_cast<BinaryOperator>(left);
             if (binaryLeft->getOp() == under) {
                 anyChange = true;
-                std::shared_ptr<Proposition> l = std::make_shared<BinaryOperator>(binaryLeft->left, over, right);
-                std::shared_ptr<Proposition> r = std::make_shared<BinaryOperator>(binaryLeft->right, over, right->copy());
+                PropositionSP l = std::make_shared<BinaryOperator>(binaryLeft->left, over, right);
+                PropositionSP r = std::make_shared<BinaryOperator>(binaryLeft->right, over, right->copy());
                 auto distLeft = l->distributeOrAnd(orOverAnd, anyChange);
                 if (distLeft)
                     l = distLeft;
@@ -202,7 +215,7 @@ std::shared_ptr<Proposition> BinaryOperator::distributeOrAnd(bool orOverAnd, boo
     return nullptr;
 }
 
-std::shared_ptr<Proposition> BinaryOperator::reduce(bool& anyChange) {
+PropositionSP BinaryOperator::reduce(bool& anyChange) {
     if (op == AND || op == OR) {
         if (left->getType() == CONSTANT) {
             auto constLeft = std::static_pointer_cast<Constant>(left);

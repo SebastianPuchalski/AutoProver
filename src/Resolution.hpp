@@ -3,7 +3,7 @@
 #include "Proposition.hpp"
 
 namespace Resolution {
-	bool isValid(const std::shared_ptr<Proposition>& proposition);
-	bool isContradiction(const std::shared_ptr<Proposition>& proposition);
+	bool isValid(const PropositionSP& proposition);
+	bool isContradiction(const PropositionSP& proposition);
 
 } // namespace Resolution

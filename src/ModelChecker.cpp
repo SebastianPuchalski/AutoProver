@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <algorithm>
 
-bool NaiveModelChecker::isValid(const std::shared_ptr<Proposition>& proposition) const {
+bool NaiveModelChecker::isValid(const PropositionSP& proposition) const {
 	const int BIT_COUNT = sizeof(uint64_t) * 8;
 	const int LOG_BIT_COUNT = 6;
 	assert((1 << LOG_BIT_COUNT) == BIT_COUNT);
@@ -61,7 +61,7 @@ bool NaiveModelChecker::isValid(const std::shared_ptr<Proposition>& proposition)
 	return true;
 }
 
-bool NaiveModelChecker::isContradiction(const std::shared_ptr<Proposition>& proposition) const {
+bool NaiveModelChecker::isContradiction(const PropositionSP& proposition) const {
 	auto notProposition = std::make_shared<UnaryOperator>(proposition, UnaryOperator::NOT);
 	return isValid(notProposition);
 }

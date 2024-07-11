@@ -180,7 +180,7 @@ using Proof = std::vector<ProofItem>;
 
 const bool RECORD_GRAPH = true;
 
-bool traverseLiteral(std::vector<Literal>& literals, const std::shared_ptr<Proposition>& literal, bool negation) {
+bool traverseLiteral(std::vector<Literal>& literals, const PropositionSP& literal, bool negation) {
 	if (literal->getType() == Proposition::UNARY &&
 		std::static_pointer_cast<UnaryOperator>(literal)->getOp() == UnaryOperator::NOT) {
 		assert(!negation);
@@ -200,7 +200,7 @@ bool traverseLiteral(std::vector<Literal>& literals, const std::shared_ptr<Propo
 	// returns false if literal is True and should be removed
 }
 
-bool traverseClause(std::vector<Literal>& literals, const std::shared_ptr<Proposition>& clause) {
+bool traverseClause(std::vector<Literal>& literals, const PropositionSP& clause) {
 	if (clause->getType() == Proposition::BINARY &&
 		std::static_pointer_cast<BinaryOperator>(clause)->getOp() == BinaryOperator::OR) {
 		auto binaryProp = std::static_pointer_cast<BinaryOperator>(clause);
@@ -211,7 +211,7 @@ bool traverseClause(std::vector<Literal>& literals, const std::shared_ptr<Propos
 	// returns false if clause is True and should be removed
 }
 
-void cnfPropToVec(std::vector<Clause>& clauses, const std::shared_ptr<Proposition>& cnf) {
+void cnfPropToVec(std::vector<Clause>& clauses, const PropositionSP& cnf) {
 	if (cnf->getType() == Proposition::BINARY &&
 		std::static_pointer_cast<BinaryOperator>(cnf)->getOp() == BinaryOperator::AND) {
 		auto binaryProp = std::static_pointer_cast<BinaryOperator>(cnf);
@@ -500,12 +500,12 @@ std::string renderProof(const Graph& graph) {
 	return result;
 }
 
-bool isValid(const std::shared_ptr<Proposition>& proposition) {
+bool isValid(const PropositionSP& proposition) {
 	auto notProposition = std::make_shared<UnaryOperator>(proposition, UnaryOperator::NOT);
 	return isContradiction(notProposition);
 }
 
-bool isContradiction(const std::shared_ptr<Proposition>& proposition) {
+bool isContradiction(const PropositionSP& proposition) {
 	auto cnf = proposition->toCnf();
 
 	std::vector<Clause> clauses;

@@ -2,17 +2,17 @@
 
 #include "BinaryOperator.hpp"
 
-std::shared_ptr<Proposition> Proposition::toCnf() const {
+PropositionSP Proposition::toCnf() const {
     return toNormalForm(true);
 }
 
-std::shared_ptr<Proposition> Proposition::toDnf() const {
+PropositionSP Proposition::toDnf() const {
     return toNormalForm(false);
 }
 
-std::shared_ptr<Proposition> Proposition::toNormalForm(bool cnf) const {
+PropositionSP Proposition::toNormalForm(bool cnf) const {
     auto proposition = copy();
-    std::shared_ptr<Proposition> newProposition;
+    PropositionSP newProposition;
 
     newProposition = proposition->transformXnorToImp();
     if (newProposition)

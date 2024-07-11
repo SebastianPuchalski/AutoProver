@@ -9,9 +9,25 @@ At the moment, the project consists of:
 - Formulas parser (including operators precedence) and printer
 - Naive Model Checking
 - Very efficient implementation of the Resolution method with proof generation
-- Forward chaining in the form of an updatable knowledge base
+- Forward chaining based on Horn clauses in the form of an updatable knowledge base
+- Implementation of the Natural Deduction method with proof generation
 
-Example 1:
+Natural deduction example:
+```
+1. p & s                  Premise
+2. p                      OK 1
+3. s                      OK 1
+4. (s & r) -> t           Premise
+5. (p -> q) & (q -> r)    Premise
+6. p -> q                 OK 5
+7. q                      RO 6, 2
+8. q -> r                 OK 5
+9. r                      RO 8, 7
+10. s & r                 DK 3, 9
+11. t                     RO 4, 10
+```
+
+Resolution example 1:
 ```
 ((p & (q | r)) <-> ((p & q) | (p & r))) & ((q & (p | r)) <-> ((q & p) | (q & r))) & ((r & (p | q)) <-> ((r & p) | (r & q)))
 Model checking: valid
@@ -39,7 +55,7 @@ Refutation found
 Elapsed time: 0.000021s
 ```
 
-Example2:
+Resolution example2:
 ```
 ((a & ~b) | c) <-> (d -> (e & f)) <-> ((a & ~b) | c) <-> (d -> (e & f))
 Model checking: valid
@@ -99,7 +115,7 @@ Refutation found
 Elapsed time: 0.000121s
 ```
 
-Example 3:
+Resolution example 3:
 ```
 ((a | b | c) & (d | e | f) & (g | h | i) & (j | k | l)) -> ((a & d & g & j) | (a & d & g & k) | (a & d & g & l) | (a & d & h & j) | (a & d & h & k) | (a & d & h & l) | (a & d & i & j) | (a & d & i & k) | (a & d & i & l) | (a & e & g & j) | (a & e & g & k) | (a & e & g & l) | (a & e & h & j) | (a & e & h & k) | (a & e & h & l) | (a & e & i & j) | (a & e & i & k) | (a & e & i & l) | (a & f & g & j) | (a & f & g & k) | (a & f & g & l) | (a & f & h & j) | (a & f & h & k) | (a & f & h & l) | (a & f & i & j) | (a & f & i & k) | (a & f & i & l) | (b & d & g & j) | (b & d & g & k) | (b & d & g & l) | (b & d & h & j) | (b & d & h & k) | (b & d & h & l) | (b & d & i & j) | (b & d & i & k) | (b & d & i & l) | (b & e & g & j) | (b & e & g & k) | (b & e & g & l) | (b & e & h & j) | (b & e & h & k) | (b & e & h & l) | (b & e & i & j) | (b & e & i & k) | (b & e & i & l) | (b & f & g & j) | (b & f & g & k) | (b & f & g & l) | (b & f & h & j) | (b & f & h & k) | (b & f & h & l) | (b & f & i & j) | (b & f & i & k) | (b & f & i & l) | (c & d & g & j) | (c & d & g & k) | (c & d & g & l) | (c & d & h & j) | (c & d & h & k) | (c & d & h & l) | (c & d & i & j) | (c & d & i & k) | (c & d & i & l) | (c & e & g & j) | (c & e & g & k) | (c & e & g & l) | (c & e & h & j) | (c & e & h & k) | (c & e & h & l) | (c & e & i & j) | (c & e & i & k) | (c & e & i & l) | (c & f & g & j) | (c & f & g & k) | (c & f & g & l) | (c & f & h & j) | (c & f & h & k) | (c & f & h & l) | (c & f & i & j) | (c & f & i & k) | (c & f & i & l))
 Model checking: valid

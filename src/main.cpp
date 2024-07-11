@@ -6,6 +6,7 @@
 #include "ModelChecker.hpp"
 #include "Resolution.hpp"
 #include "ForwardChaining.hpp"
+#include "NaturalDeduction.hpp"
 
 #include <iostream>
 
@@ -54,6 +55,31 @@ void testForwardChaining() {
 	cout << "Chaining result: " << (result ? "Entailed" : "Not entailed") << endl;
 }
 
+void testNaturalDeduction() {
+	Converter converter;
+	NaturalDeduction nd;
+	nd.addJasInferenceRules();
+
+	/*nd.addPremise(converter.fromString("a"));
+	nd.addPremise(converter.fromString("a -> b"));
+	nd.addPremise(converter.fromString("b <-> c"));
+	nd.addPremise(converter.fromString("(c & a) -> f"));
+	nd.setConclusion(converter.fromString("f"));*/
+
+	nd.addPremise(converter.fromString("p & s"));
+	nd.addPremise(converter.fromString("(p -> q) & (q -> r)"));
+	nd.addPremise(converter.fromString("(s & r) -> t"));
+	nd.setConclusion(converter.fromString("t"));
+
+	/*nd.addPremise(converter.fromString("((a <-> b) <-> c)"));
+	nd.setConclusion(converter.fromString("(a <-> (b <-> c))"));*/
+
+	uint64_t i;
+	for (i = 1; nd.step(); i++);
+	cout << "Proof " << (nd.isProofFound() ? "" : "not ") << "found in " << i << " steps\n";
+	cout << nd.getProofString() << endl;
+}
+
 int main() {
 	Converter converter;
 	converter.setParenthesisIfBinOpIsAssociative(false);
@@ -63,6 +89,14 @@ int main() {
 	while (true) {
 		string str;
 		getline(cin, str);
+		if (str == "test fc") {
+			testForwardChaining();
+			continue;
+		}
+		if (str == "test nd") {
+			testNaturalDeduction();
+			continue;
+		}
 		shared_ptr<Proposition> proposition = converter.fromString(str);
 
 		if (proposition) {
@@ -89,8 +123,6 @@ int main() {
 		}
 		cout << endl;
 	}
-
-	//testForwardChaining();
 
 	return 0;
 }

@@ -4,6 +4,6 @@
 
 class NaiveModelChecker {
 public:
-	bool isValid(const std::shared_ptr<Proposition>& proposition) const;
-	bool isContradiction(const std::shared_ptr<Proposition>& proposition) const;
+	bool isValid(const PropositionSP& proposition) const;
+	bool isContradiction(const PropositionSP& proposition) const;
 };

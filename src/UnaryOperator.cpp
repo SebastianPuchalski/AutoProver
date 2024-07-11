@@ -4,14 +4,14 @@
 
 #include <cassert>
 
-UnaryOperator::UnaryOperator(std::shared_ptr<Proposition> operand, Op op) :
+UnaryOperator::UnaryOperator(PropositionSP operand, Op op) :
     operand(operand), op(op) {}
 
 UnaryOperator::Type UnaryOperator::getType() const {
     return UNARY;
 }
 
-std::shared_ptr<Proposition> UnaryOperator::getOperand() const {
+PropositionSP UnaryOperator::getOperand() const {
     return operand;
 }
 
@@ -19,7 +19,7 @@ UnaryOperator::Op UnaryOperator::getOp() const {
     return op;
 }
 
-void UnaryOperator::setOperand(std::shared_ptr<Proposition> operand) {
+void UnaryOperator::setOperand(PropositionSP operand) {
     this->operand = operand;
 }
 
@@ -27,8 +27,21 @@ void UnaryOperator::setOp(Op op) {
     this->op = op;
 }
 
-std::shared_ptr<Proposition> UnaryOperator::copy() const {
+bool UnaryOperator::isEquivalent(PropositionSP proposition) const {
+    if (!proposition || proposition->getType() != Proposition::UNARY)
+        return false;
+    auto prop = std::static_pointer_cast<UnaryOperator>(proposition);
+    if (op != prop->op)
+        return false;
+    return operand->isEquivalent(prop->operand);
+}
+
+PropositionSP UnaryOperator::copy() const {
     return std::make_shared<UnaryOperator>(operand->copy(), op);
+}
+
+int UnaryOperator::getLength() const {
+    return operand->getLength() + 1;
 }
 
 void UnaryOperator::getVariableIds(std::vector<int>& variableIds) const {
@@ -52,21 +65,21 @@ uint64_t UnaryOperator::evaluate(const std::vector<uint64_t>& varValues) const {
     return 0;
 }
 
-std::shared_ptr<Proposition> UnaryOperator::transformXnorToImp() {
+PropositionSP UnaryOperator::transformXnorToImp() {
     auto transOperand = operand->transformXnorToImp();
     if (transOperand)
         operand = transOperand;
     return nullptr;
 }
 
-std::shared_ptr<Proposition> UnaryOperator::transformImpToOr() {
+PropositionSP UnaryOperator::transformImpToOr() {
     auto transOperand = operand->transformImpToOr();
     if (transOperand)
         operand = transOperand;
     return nullptr;
 }
 
-std::shared_ptr<Proposition> UnaryOperator::eliminateDoubleNot(bool& anyChange) {
+PropositionSP UnaryOperator::eliminateDoubleNot(bool& anyChange) {
     if (op == NOT && operand->getType() == Proposition::UNARY) {
         auto unaryOperand = std::static_pointer_cast<UnaryOperator>(operand);
         if (unaryOperand->getOp() == NOT) {
@@ -85,7 +98,7 @@ std::shared_ptr<Proposition> UnaryOperator::eliminateDoubleNot(bool& anyChange) 
     return nullptr;
 }
 
-std::shared_ptr<Proposition> UnaryOperator::moveNotInwardsOp(int binaryOp, bool& anyChange) {
+PropositionSP UnaryOperator::moveNotInwardsOp(int binaryOp, bool& anyChange) {
     assert(binaryOp == BinaryOperator::AND || binaryOp == BinaryOperator::OR);
     if (op == NOT && operand->getType() == BINARY) {
         auto binaryOperand = std::static_pointer_cast<BinaryOperator>(operand);
@@ -95,8 +108,8 @@ std::shared_ptr<Proposition> UnaryOperator::moveNotInwardsOp(int binaryOp, bool&
                 binaryOperand->setOp(BinaryOperator::OR);
             if (binaryOp == BinaryOperator::OR)
                 binaryOperand->setOp(BinaryOperator::AND);
-            std::shared_ptr<Proposition> left = std::make_shared<UnaryOperator>(binaryOperand->getLeft(), NOT);
-            std::shared_ptr<Proposition> right = std::make_shared<UnaryOperator>(binaryOperand->getRight(), NOT);
+            PropositionSP left = std::make_shared<UnaryOperator>(binaryOperand->getLeft(), NOT);
+            PropositionSP right = std::make_shared<UnaryOperator>(binaryOperand->getRight(), NOT);
             auto movedLeft = left->moveNotInwardsOp(binaryOp, anyChange);
             if (movedLeft)
                 left = movedLeft;
@@ -115,14 +128,14 @@ std::shared_ptr<Proposition> UnaryOperator::moveNotInwardsOp(int binaryOp, bool&
     return nullptr;
 }
 
-std::shared_ptr<Proposition> UnaryOperator::distributeOrAnd(bool orOverAnd, bool& anyChange) {
+PropositionSP UnaryOperator::distributeOrAnd(bool orOverAnd, bool& anyChange) {
     auto distOperand = operand->distributeOrAnd(orOverAnd, anyChange);
     if (distOperand)
         operand = distOperand;
     return nullptr;
 }
 
-std::shared_ptr<Proposition> UnaryOperator::reduce(bool& anyChange) {
+PropositionSP UnaryOperator::reduce(bool& anyChange) {
     auto reducedOperand = operand->reduce(anyChange);
     if (reducedOperand)
         operand = reducedOperand;
