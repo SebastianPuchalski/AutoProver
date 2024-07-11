@@ -10,7 +10,7 @@ At the moment, the project consists of:
 - Naive Model Checking
 - Very efficient implementation of the Resolution method with proof generation
 - Forward chaining based on Horn clauses in the form of an updatable knowledge base
-- Implementation of the Natural Deduction method with proof generation
+- Implementation of the Natural Deduction alike method with proof generation
 
 Natural deduction example:
 ```
