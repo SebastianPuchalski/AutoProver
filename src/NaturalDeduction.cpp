@@ -5,7 +5,7 @@
 #include <cassert>
 #include <queue>
 
-const size_t MAX_QUEUE_SIZE = 50000000;
+const size_t MAX_UNPROC_SIZE = 50000000;
 
 PropositionItem::PropositionItem(PropositionSP proposition, std::string infRuleName, int src1, int src2) :
 	proposition(proposition), infRuleName(infRuleName), src1(src1), src2(src2),
@@ -417,7 +417,7 @@ void NaturalDeduction::addProposition(PropositionItem item) {
 	unprocPropositions.insert(item);
 	if (conclusion && item.proposition->isEquivalent(conclusion))
 		proofFound = true;
-	if(unprocPropositions.size() > MAX_QUEUE_SIZE)
+	if(unprocPropositions.size() > MAX_UNPROC_SIZE)
 		unprocPropositions.erase(std::prev(unprocPropositions.end()));
 }
 
