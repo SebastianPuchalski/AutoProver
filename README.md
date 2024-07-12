@@ -9,8 +9,13 @@ At the moment, the project consists of:
 - Formulas parser (including operators precedence) and printer
 - Naive Model Checking
 - Very efficient implementation of the Resolution method with proof generation
+<<<<<<< HEAD
 - Forward Chaining based on Horn clauses in the form of an updatable knowledge base
 - Implementation of the Natural Deduction method with proof generation
+=======
+- Forward chaining based on Horn clauses in the form of an updatable knowledge base
+- Implementation of the Natural Deduction alike method with proof generation
+>>>>>>> 56a0d31f3f04b6f3e46e5ebc7840650b8b928366
 
 Natural deduction example:
 ```
