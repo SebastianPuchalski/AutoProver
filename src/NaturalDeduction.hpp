@@ -34,7 +34,6 @@ public:
 	virtual ~NaturalDeduction() = default;
 
 	void addJasInferenceRules();
-	void addCustomInferenceRules();
 	void addInferenceRule(const InferenceRule& rule);
 
 	void addPremise(PropositionSP premise);
