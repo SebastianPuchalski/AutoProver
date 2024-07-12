@@ -5,12 +5,27 @@
 #include <cassert>
 #include <queue>
 
+const size_t MAX_QUEUE_SIZE = 50000000;
+
+PropositionItem::PropositionItem(PropositionSP proposition, std::string infRuleName, int src1, int src2) :
+	proposition(proposition), infRuleName(infRuleName), src1(src1), src2(src2),
+	itemId(idCounter++), propLength(proposition->getLength()) {}
+
+bool PropositionItem::operator<(const PropositionItem& rhs) const {
+	if (propLength != rhs.propLength)
+		return propLength < rhs.propLength;
+	if (proposition->isEquivalent(rhs.proposition))
+		return false;
+	return itemId < rhs.itemId;
+}
+
 int PropositionItem::idCounter = 0;
 
 NaturalDeduction::NaturalDeduction() : proofFound(false) {}
 
 void NaturalDeduction::addJasInferenceRules() {
 	Converter converter;
+	const bool org = true;
 
 	InferenceRule ro;
 	ro.premises.push_back(converter.fromString("a -> b"));
@@ -52,19 +67,21 @@ void NaturalDeduction::addJasInferenceRules() {
 	da2.name = "DA";
 	addInferenceRule(da2);
 
-	InferenceRule oa1;
-	oa1.premises.push_back(converter.fromString("a | b"));
-	oa1.premises.push_back(converter.fromString("~a"));
-	oa1.conclusion = converter.fromString("b");
-	oa1.name = "OA";
-	addInferenceRule(oa1);
+	if (!org) {
+		InferenceRule oa1;
+		oa1.premises.push_back(converter.fromString("a | b"));
+		oa1.premises.push_back(converter.fromString("~a"));
+		oa1.conclusion = converter.fromString("b");
+		oa1.name = "OA";
+		addInferenceRule(oa1);
 
-	InferenceRule oa2;
-	oa2.premises.push_back(converter.fromString("a | b"));
-	oa2.premises.push_back(converter.fromString("~b"));
-	oa2.conclusion = converter.fromString("a");
-	oa2.name = "OA";
-	addInferenceRule(oa2);
+		InferenceRule oa2;
+		oa2.premises.push_back(converter.fromString("a | b"));
+		oa2.premises.push_back(converter.fromString("~b"));
+		oa2.conclusion = converter.fromString("a");
+		oa2.name = "OA";
+		addInferenceRule(oa2);
+	}
 
 	InferenceRule dr;
 	dr.premises.push_back(converter.fromString("a -> b"));
@@ -85,18 +102,164 @@ void NaturalDeduction::addJasInferenceRules() {
 	or2.name = "OR";
 	addInferenceRule(or2);
 
-	InferenceRule rk;
-	rk.premises.push_back(converter.fromString("~a -> ~b"));
-	rk.conclusion = converter.fromString("b -> a");
-	rk.name = "RK";
-	addInferenceRule(rk);
+	if (org) {
+		InferenceRule rk;
+		rk.premises.push_back(converter.fromString("~a -> ~b"));
+		rk.conclusion = converter.fromString("b -> a");
+		rk.name = "RK";
+		addInferenceRule(rk);
 
-	InferenceRule dp;
-	dp.premises.push_back(converter.fromString("a -> c"));
-	dp.premises.push_back(converter.fromString("b -> c"));
-	dp.conclusion = converter.fromString("(a | b) -> c");
-	dp.name = "DP";
-	addInferenceRule(dp);
+		InferenceRule dp;
+		dp.premises.push_back(converter.fromString("a -> c"));
+		dp.premises.push_back(converter.fromString("b -> c"));
+		dp.conclusion = converter.fromString("(a | b) -> c");
+		dp.name = "DP";
+		addInferenceRule(dp);
+	}
+}
+
+void NaturalDeduction::addCustomInferenceRules() {
+	Converter converter;
+
+	// Modus Ponens (MP)
+	InferenceRule mp;
+	mp.premises.push_back(converter.fromString("a -> b"));
+	mp.premises.push_back(converter.fromString("a"));
+	mp.conclusion = converter.fromString("b");
+	mp.name = "MP";
+	addInferenceRule(mp);
+
+	// Modus Tollens (MT)
+	InferenceRule mt;
+	mt.premises.push_back(converter.fromString("a -> b"));
+	mt.premises.push_back(converter.fromString("~b"));
+	mt.conclusion = converter.fromString("~a");
+	mt.name = "MT";
+	addInferenceRule(mt);
+
+	// Hypothetical Syllogism (HS)
+	InferenceRule hs;
+	hs.premises.push_back(converter.fromString("a -> b"));
+	hs.premises.push_back(converter.fromString("b -> c"));
+	hs.conclusion = converter.fromString("a -> c");
+	hs.name = "HS";
+	addInferenceRule(hs);
+
+	// Disjunction Introduction (DI) - modified
+	InferenceRule di;
+	di.premises.push_back(converter.fromString("a"));
+	di.premises.push_back(converter.fromString("b"));
+	di.conclusion = converter.fromString("a | b");
+	di.name = "DI";
+	addInferenceRule(di);
+
+	// Conjunction Introduction (CI)
+	InferenceRule ci;
+	ci.premises.push_back(converter.fromString("a"));
+	ci.premises.push_back(converter.fromString("b"));
+	ci.conclusion = converter.fromString("a & b");
+	ci.name = "CI";
+	addInferenceRule(ci);
+
+	// Conjunction Elimination (CE1)
+	InferenceRule ce1;
+	ce1.premises.push_back(converter.fromString("a & b"));
+	ce1.conclusion = converter.fromString("a");
+	ce1.name = "CE1";
+	addInferenceRule(ce1);
+
+	// Conjunction Elimination (CE2)
+	InferenceRule ce2;
+	ce2.premises.push_back(converter.fromString("a & b"));
+	ce2.conclusion = converter.fromString("b");
+	ce2.name = "CE2";
+	addInferenceRule(ce2);
+
+	// Disjunction Elimination (DE)
+	InferenceRule de;
+	de.premises.push_back(converter.fromString("a | b"));
+	de.premises.push_back(converter.fromString("a -> c"));
+	de.premises.push_back(converter.fromString("b -> c"));
+	de.conclusion = converter.fromString("c");
+	de.name = "DE";
+	addInferenceRule(de);
+
+	// Double Negation (DN1)
+	InferenceRule dn1;
+	dn1.premises.push_back(converter.fromString("a"));
+	dn1.conclusion = converter.fromString("~~a");
+	dn1.name = "DN1";
+	addInferenceRule(dn1);
+
+	// Double Negation (DN2)
+	InferenceRule dn2;
+	dn2.premises.push_back(converter.fromString("~~a"));
+	dn2.conclusion = converter.fromString("a");
+	dn2.name = "DN2";
+	addInferenceRule(dn2);
+
+	// De Morgan's Laws (DM1a)
+	InferenceRule dm1a;
+	dm1a.premises.push_back(converter.fromString("~(a & b)"));
+	dm1a.conclusion = converter.fromString("~a | ~b");
+	dm1a.name = "DM1a";
+	addInferenceRule(dm1a);
+
+	// De Morgan's Laws (DM1b)
+	InferenceRule dm1b;
+	dm1b.premises.push_back(converter.fromString("~a | ~b"));
+	dm1b.conclusion = converter.fromString("~(a & b)");
+	dm1b.name = "DM1b";
+	addInferenceRule(dm1b);
+
+	// De Morgan's Laws (DM2a)
+	InferenceRule dm2a;
+	dm2a.premises.push_back(converter.fromString("~(a | b)"));
+	dm2a.conclusion = converter.fromString("~a & ~b");
+	dm2a.name = "DM2a";
+	addInferenceRule(dm2a);
+
+	// De Morgan's Laws (DM2b)
+	InferenceRule dm2b;
+	dm2b.premises.push_back(converter.fromString("~a & ~b"));
+	dm2b.conclusion = converter.fromString("~(a | b)");
+	dm2b.name = "DM2b";
+	addInferenceRule(dm2b);
+
+	// Exportation (EX1)
+	InferenceRule ex1;
+	ex1.premises.push_back(converter.fromString("(a & b) -> c"));
+	ex1.conclusion = converter.fromString("a -> (b -> c)");
+	ex1.name = "EX1";
+	addInferenceRule(ex1);
+
+	// Exportation (EX2)
+	InferenceRule ex2;
+	ex2.premises.push_back(converter.fromString("a -> (b -> c)"));
+	ex2.conclusion = converter.fromString("(a & b) -> c");
+	ex2.name = "EX2";
+	addInferenceRule(ex2);
+
+	// Equivalence (EQ1)
+	InferenceRule eq1;
+	eq1.premises.push_back(converter.fromString("a <-> b"));
+	eq1.conclusion = converter.fromString("(a -> b) & (b -> a)");
+	eq1.name = "EQ1";
+	addInferenceRule(eq1);
+
+	// Equivalence (EQ2)
+	InferenceRule eq2;
+	eq2.premises.push_back(converter.fromString("(a -> b) & (b -> a)"));
+	eq2.conclusion = converter.fromString("a <-> b");
+	eq2.name = "EQ2";
+	addInferenceRule(eq2);
+
+	// Equivalence Associativity - redundant?
+	InferenceRule eqAssoc;
+	eqAssoc.premises.push_back(converter.fromString("(a <-> b) <-> c"));
+	eqAssoc.conclusion = converter.fromString("a <-> (b <-> c)");
+	eqAssoc.name = "EQ_ASSOC";
+	addInferenceRule(eqAssoc);
 }
 
 void NaturalDeduction::addInferenceRule(const InferenceRule& rule) {
@@ -254,6 +417,8 @@ void NaturalDeduction::addProposition(PropositionItem item) {
 	unprocPropositions.insert(item);
 	if (conclusion && item.proposition->isEquivalent(conclusion))
 		proofFound = true;
+	if(unprocPropositions.size() > MAX_QUEUE_SIZE)
+		unprocPropositions.erase(std::prev(unprocPropositions.end()));
 }
 
 inline PropositionSP NaturalDeduction::applyRule(
@@ -335,7 +500,7 @@ PropositionSP NaturalDeduction::traverseRuleConclusion(const std::vector<Proposi
 	switch (rule->getType()) {
 	case Proposition::VARIABLE:
 		assert(std::static_pointer_cast<Variable>(rule)->getId() < substTable.size());
-		return substTable[std::static_pointer_cast<Variable>(rule)->getId()]->copy();
+		return substTable[std::static_pointer_cast<Variable>(rule)->getId()];
 	case Proposition::CONSTANT:
 		return rule->copy();
 	case Proposition::UNARY:

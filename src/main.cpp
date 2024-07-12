@@ -71,11 +71,13 @@ void testNaturalDeduction() {
 	nd.addPremise(converter.fromString("(s & r) -> t"));
 	nd.setConclusion(converter.fromString("t"));
 
-	/*nd.addPremise(converter.fromString("((a <-> b) <-> c)"));
-	nd.setConclusion(converter.fromString("(a <-> (b <-> c))"));*/
+	/*nd.addPremise(converter.fromString("(a <-> b) <-> c"));
+	nd.setConclusion(converter.fromString("a <-> (b <-> c)"));*/
 
 	uint64_t i;
-	for (i = 1; nd.step(); i++);
+	for (i = 1; nd.step(); i++)
+		if(i % 1000 == 0)
+			cout << "Step: " << i << endl;
 	cout << "Proof " << (nd.isProofFound() ? "" : "not ") << "found in " << i << " steps\n";
 	cout << nd.getProofString() << endl;
 }

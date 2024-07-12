@@ -19,15 +19,8 @@ struct PropositionItem {
 	const int src1;
 	const int src2;
 
-	PropositionItem(PropositionSP proposition, std::string infRuleName = "", int src1 = -1, int src2 = -1) :
-		proposition(proposition), infRuleName(infRuleName), src1(src1), src2(src2),
-		itemId(idCounter++), propLength(proposition->getLength()) {}
-
-	bool operator<(const PropositionItem& rhs) const {
-		if (propLength != rhs.propLength)
-			return propLength < rhs.propLength;
-		return itemId < rhs.itemId;
-	}
+	PropositionItem(PropositionSP proposition, std::string infRuleName = "", int src1 = -1, int src2 = -1);
+	bool operator<(const PropositionItem& rhs) const;
 
 private:
 	static int idCounter;
@@ -41,6 +34,7 @@ public:
 	virtual ~NaturalDeduction() = default;
 
 	void addJasInferenceRules();
+	void addCustomInferenceRules();
 	void addInferenceRule(const InferenceRule& rule);
 
 	void addPremise(PropositionSP premise);
