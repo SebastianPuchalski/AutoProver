@@ -496,16 +496,18 @@ std::string renderProof(const Graph& graph) {
 		}
 		result += line + "\n";
 	}
-	result += "Refutation found\n";
 	return result;
 }
 
-bool isValid(const PropositionSP& proposition) {
+bool isValid(const PropositionSP& proposition, std::string* proof) {
 	auto notProposition = std::make_shared<UnaryOperator>(proposition, UnaryOperator::NOT);
-	return isContradiction(notProposition);
+	bool result = isContradiction(notProposition, proof);
+	if (proof)
+		*proof = "Proof by refutation:\n" + *proof;
+	return result;
 }
 
-bool isContradiction(const PropositionSP& proposition) {
+bool isContradiction(const PropositionSP& proposition, std::string* proof) {
 	auto cnf = proposition->toCnf();
 
 	std::vector<Clause> clauses;
@@ -533,8 +535,6 @@ bool isContradiction(const PropositionSP& proposition) {
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
-	std::cout << "Resolution: " << (result ? "valid" : "not valid") << std::endl;
-
 	/*std::cout << "p_iter: " << p_iter << std::endl;
 	std::cout << "p_prod: " << p_prod << std::endl;
 	std::cout << "p_current: " << p_current << std::endl;
@@ -545,18 +545,25 @@ bool isContradiction(const PropositionSP& proposition) {
 	std::cout << "p_remove: " << p_remove << std::endl;
 	std::cout << std::endl;*/
 
-	if (RECORD_GRAPH && result) {
-		std::string str = "\nProof by refutation:\n";
-		str += "0. ";
-		Converter converter;
-		str += converter.toString(proposition) + "\n";
-		str += renderProof(graph);
-		std::cout << str;
+	if (proof) {
+		if (result) {
+			std::string str;
+			if (RECORD_GRAPH) {
+				str = "0. ";
+				Converter converter;
+				str += converter.toString(proposition) + "\n";
+				str += renderProof(graph);
+			}
+			*proof += str;
+			*proof += "Contradiction found\n";
+			if(!RECORD_GRAPH)
+				*proof += "Proof unavailable\n";
+		}
+		else
+			*proof += "Contradiction not found\n";
+		*proof += "Elapsed time: ";
+		*proof += std::to_string((double)duration.count() / 1000000) + "s\n";
 	}
-
-	std::cout << "Elapsed time: ";
-	std::cout << std::fixed << std::setprecision(6);
-	std::cout << (double)duration.count() / 1000000 << "s" << std::endl;
 
 	return result;
 }

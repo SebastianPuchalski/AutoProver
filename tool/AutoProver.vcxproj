@@ -23,11 +23,11 @@
     <ClCompile Include="..\src\ForwardChaining.cpp" />
     <ClCompile Include="..\src\Constant.cpp" />
     <ClCompile Include="..\src\Converter.cpp" />
-    <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\ModelChecker.cpp" />
     <ClCompile Include="..\src\NaturalDeduction.cpp" />
     <ClCompile Include="..\src\Proposition.cpp" />
     <ClCompile Include="..\src\Resolution.cpp" />
+    <ClCompile Include="..\src\tool\main.cpp" />
     <ClCompile Include="..\src\UnaryOperator.cpp" />
     <ClCompile Include="..\src\Variable.cpp" />
   </ItemGroup>
@@ -50,6 +50,7 @@
     <ProjectGuid>{071819e1-fc63-4249-94c2-1c6710c9332a}</ProjectGuid>
     <RootNamespace>AutoProver</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Tool</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

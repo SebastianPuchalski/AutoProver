@@ -132,7 +132,7 @@ void Converter::setBinaryOpPrecedenceLevels(const std::vector<int>& precedenceLe
 	binaryOpPrecedenceLevels = precedenceLevels;
 }
 
-void Converter::setParenthesisIfBinOpIsAssociative(bool skip) {
+void Converter::skipParenthesisIfBinOpIsAssociative(bool skip) {
 	skipParenthesisIfAssociative = skip;
 }
 

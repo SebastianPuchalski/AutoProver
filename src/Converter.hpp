@@ -29,7 +29,7 @@ public:
 		                      char whitespace = ' ');
 	void setBinaryOpPrecedenceLevels(const std::vector<int>& precedenceLevels);
 
-	void setParenthesisIfBinOpIsAssociative(bool skip);
+	void skipParenthesisIfBinOpIsAssociative(bool skip);
 
 	PropositionSP fromString(const std::string& str);
 	std::string toString(PropositionSP proposition, bool addParenthesis = false);
