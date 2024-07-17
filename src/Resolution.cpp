@@ -4,27 +4,29 @@
 #include "Constant.hpp"
 #include "UnaryOperator.hpp"
 #include "BinaryOperator.hpp"
+#include "NormalForm.hpp"
 #include "Converter.hpp"
 
 #include <vector>
 #include <cassert>
 #include <string>
-#include <iostream>
+//#include <iostream>
 #include <unordered_set>
 #include <unordered_map>
 #include <set>
-#include <map>
 #include <chrono>
-#include <bit>
+//#include <bit>
 
-size_t p_iter = 0;
-size_t p_prod = 0;
-size_t p_current = 0;
-size_t p_exists = 0;
-size_t p_removetest = 0;
-size_t p_proc = 0;
-size_t p_add = 0;
-size_t p_remove = 0;
+const bool RECORD_GRAPH = true;
+
+//size_t p_iter = 0;
+//size_t p_prod = 0;
+//size_t p_current = 0;
+//size_t p_exists = 0;
+//size_t p_removetest = 0;
+//size_t p_proc = 0;
+//size_t p_add = 0;
+//size_t p_remove = 0;
 
 struct BitClause {
 	static const int VARIABLE_COUNT = sizeof(uint64_t) * 8;
@@ -59,13 +61,11 @@ struct BitClause {
 		assert(std::popcount(rhs.pLiterals | rhs.nLiterals) == rhsOneCount);
 		if (oneCount != rhsOneCount)
 			return oneCount < rhsOneCount;*/
-
 		uint64_t literalsLhs = pLiterals | nLiterals;
 		uint64_t literalsRhs = rhs.pLiterals | rhs.nLiterals;
 		if(literalsLhs != literalsRhs)
 			return literalsLhs < literalsRhs;
 		return pLiterals < rhs.pLiterals;
-
 		/*if (pLiterals != rhs.pLiterals)
 			return pLiterals < rhs.pLiterals;
 		return nLiterals < rhs.nLiterals;*/
@@ -125,13 +125,13 @@ struct BucketBuff {
 		for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
 			uint64_t mask = static_cast<uint64_t>(1) << v;
 			if (clause.pLiterals & mask) {
-				p_add++;
+				//p_add++;
 				BitClause newClause = clause;
 				newClause.pLiterals &= ~mask;
 				pBuckets[v].insert(newClause);
 			}
 			if (clause.nLiterals & mask) {
-				p_add++;
+				//p_add++;
 				BitClause newClause = clause;
 				newClause.nLiterals &= ~mask;
 				nBuckets[v].insert(newClause);
@@ -145,13 +145,13 @@ struct BucketBuff {
 		for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
 			uint64_t mask = static_cast<uint64_t>(1) << v;
 			if (clause.pLiterals & mask) {
-				p_remove++;
+				//p_remove++;
 				BitClause removedClause = clause;
 				removedClause.pLiterals &= ~mask;
 				pBuckets[v].erase(removedClause);
 			}
 			if (clause.nLiterals & mask) {
-				p_remove++;
+				//p_remove++;
 				BitClause removedClause = clause;
 				removedClause.nLiterals &= ~mask;
 				nBuckets[v].erase(removedClause);
@@ -162,9 +162,6 @@ struct BucketBuff {
 
 namespace Resolution {
 
-using VariableId = int;
-using Literal = std::pair<VariableId, bool>;
-using Clause = std::vector<Literal>;
 using ClausePair = std::pair<BitClause, BitClause>;
 using Graph = std::unordered_map<BitClause, ClausePair>;
 
@@ -178,133 +175,7 @@ struct ProofItem {
 };
 using Proof = std::vector<ProofItem>;
 
-const bool RECORD_GRAPH = true;
-
-bool traverseLiteral(std::vector<Literal>& literals, const PropositionSP& literal, bool negation) {
-	if (literal->getType() == Proposition::UNARY &&
-		std::static_pointer_cast<UnaryOperator>(literal)->getOp() == UnaryOperator::NOT) {
-		assert(!negation);
-			auto operand = std::static_pointer_cast<UnaryOperator>(literal)->getOperand();
-			return traverseLiteral(literals, operand, true);
-	}
-	else if (literal->getType() == Proposition::CONSTANT) {
-		auto constant = std::static_pointer_cast<Constant>(literal);
-		return constant->getValue() == negation; // remove clause if literal equals True
-	}
-	else if (literal->getType() == Proposition::VARIABLE) {
-		auto variable = std::static_pointer_cast<Variable>(literal);
-		literals.push_back(Literal(variable->getId(), negation));
-	}
-	else assert(!"Unexpected literal");
-	return true;
-	// returns false if literal is True and should be removed
-}
-
-bool traverseClause(std::vector<Literal>& literals, const PropositionSP& clause) {
-	if (clause->getType() == Proposition::BINARY &&
-		std::static_pointer_cast<BinaryOperator>(clause)->getOp() == BinaryOperator::OR) {
-		auto binaryProp = std::static_pointer_cast<BinaryOperator>(clause);
-		return traverseClause(literals, binaryProp->getLeft()) &&
-			   traverseClause(literals, binaryProp->getRight());
-	}
-	return traverseLiteral(literals, clause, false);
-	// returns false if clause is True and should be removed
-}
-
-void cnfPropToVec(std::vector<Clause>& clauses, const PropositionSP& cnf) {
-	if (cnf->getType() == Proposition::BINARY &&
-		std::static_pointer_cast<BinaryOperator>(cnf)->getOp() == BinaryOperator::AND) {
-		auto binaryProp = std::static_pointer_cast<BinaryOperator>(cnf);
-		cnfPropToVec(clauses, binaryProp->getLeft());
-		cnfPropToVec(clauses, binaryProp->getRight());
-	}
-	else {
-		std::vector<Literal> clause;
-		if(traverseClause(clause, cnf))
-			clauses.push_back(clause);
-	}
-	// if there is no clause then proposition is True
-	// if there is at least one empty clause then proposition is False
-}
-
-std::string getVariableName(VariableId id) {
-	std::string result;
-	const int CHARACTER_COUNT = 'z' - 'a' + 1;
-	int character = id % CHARACTER_COUNT;
-	int number = id / CHARACTER_COUNT;
-	result += static_cast<char>('a' + character);
-	if (number > 0)
-		result += std::to_string(number);
-	return result;
-}
-
-void printCnf(const std::vector<Clause>& clauses) {
-	for (int i = 0; i < clauses.size(); i++) {
-		std::cout << "(";
-		auto literals = clauses[i];
-		for (int j = 0; j < literals.size(); j++) {
-			auto literal = literals[j];
-			if (literal.second)
-				std::cout << "~";
-			VariableId id = literal.first;
-			std::cout << getVariableName(id);
-			if (j + 1 < literals.size())
-				std::cout << " | ";
-		}
-		std::cout << ")";
-		if (i + 1 < clauses.size())
-			std::cout << " & ";
-	}
-}
-
-bool removeRedundancy(std::vector<Clause>& cnf) {
-	bool anyChange = false;
-	std::vector<Clause> newCnf;
-	for (int c = 0; c < cnf.size(); c++) {
-		auto clause = cnf[c];
-		bool removeClause = false;
-		Clause newClause;
-		for (int i = 0; i < clause.size(); i++) {
-			auto literal = clause[i];
-			bool removeLiteral = false;
-			for (int j = 0; j < i; j++) {
-				if (literal.first == clause[j].first) {
-					if (clause[i].second != clause[j].second) {
-						removeClause = anyChange = true;
-						i = j = clause.size();
-					}
-					else {
-						removeLiteral = anyChange = true;
-						break;
-					}
-				}
-			}
-			if (!removeLiteral)
-				newClause.push_back(literal);
-		}
-		if (!removeClause)
-			newCnf.push_back(newClause);
-	}
-	cnf = newCnf;
-	return anyChange;
-}
-
-void squeezeVariableIds(std::vector<Clause>& clauses) {
-	std::map<VariableId, VariableId> map;
-	for (auto& clause : clauses)
-		for (auto& literal : clause)
-			map[literal.first] = 0;
-
-	VariableId newId = 0;
-	for (auto& pair : map)
-		pair.second = newId++;
-
-	for (auto& clause : clauses)
-		for (auto& literal : clause)
-			literal.first = map[literal.first];
-}
-
-bool clausesToBitClauses(std::vector<BitClause>& bitClauses, const std::vector<Clause>& clauses) {
+bool clausesToBitClauses(std::vector<BitClause>& bitClauses, const Cnf& clauses) {
 	for (auto& clause : clauses) {
 		BitClause newClause;
 		for (auto& literal : clause) {
@@ -346,7 +217,7 @@ bool resolve(std::set<BitClause>& currClauses, Graph& graph,
 			const bool positive = mask & clause.pLiterals;
 			const auto& bucket = positive ? procClauses.nBuckets[v] : procClauses.pBuckets[v];
 			for (auto it = bucket.begin(); it != bucket.end(); it++) {
-				p_prod++;
+				//p_prod++;
 				auto procClause = *it;
 				auto maskedClause = clause;
 				(positive ? maskedClause.pLiterals : maskedClause.nLiterals) &= ~mask;
@@ -354,7 +225,7 @@ bool resolve(std::set<BitClause>& currClauses, Graph& graph,
 				newClause.pLiterals = procClause.pLiterals | maskedClause.pLiterals;
 				newClause.nLiterals = procClause.nLiterals | maskedClause.nLiterals;
 				if ((newClause.pLiterals & newClause.nLiterals) == 0) {
-					p_current++;
+					//p_current++;
 					currClauses.insert(newClause);
 					if (RECORD_GRAPH) {
 						(positive ? procClause.nLiterals : procClause.pLiterals) |= mask;
@@ -381,23 +252,23 @@ bool resolve(Graph& graph, const std::vector<BitClause>& clauses) {
 	}
 
 	while (currClauses.size()) {
-		p_iter++;
+		//p_iter++;
 		auto it = currClauses.begin();
 		BitClause clause = *it;
 		currClauses.erase(it);
 
 		bool add = true;
 		for (int i = 0; i < procClauses.size(); i++) {
-			p_exists++;
+			//p_exists++;
 			if (procClauses[i].isSubset(clause)) {
 				add = false;
 				break;
 			}
 		}
 		if (add) {
-			p_proc++;
+			//p_proc++;
 			for (int i = 0; i < procClauses.size(); i++) {
-				p_removetest++;
+				//p_removetest++;
 				auto& procClause = procClauses[i];
 				if (clause.isProperSubset(procClause)) {
 					procClausesB.removeClause(procClause);
@@ -431,6 +302,17 @@ int traverseProof(Proof& proof, const Graph& graph, BitClause clause = BitClause
 	}
 	proof.push_back(item);
 	return proof.size() - 1;
+}
+
+std::string getVariableName(VariableId id) {
+	std::string result;
+	const int CHARACTER_COUNT = 'z' - 'a' + 1;
+	int character = id % CHARACTER_COUNT;
+	int number = id / CHARACTER_COUNT;
+	result += static_cast<char>('a' + character);
+	if (number > 0)
+		result += std::to_string(number);
+	return result;
 }
 
 std::string bitClauseToStr(BitClause clause) {
@@ -508,17 +390,8 @@ bool isValid(const PropositionSP& proposition, std::string* proof) {
 }
 
 bool isContradiction(const PropositionSP& proposition, std::string* proof) {
-	auto cnf = proposition->toCnf();
-
 	std::vector<Clause> clauses;
-	cnfPropToVec(clauses, cnf);
-	cnf = nullptr;
-
-	//removeRedundancy(clauses);
-	//clauses.shrink_to_fit();
-	//printCnf(clauses);
-	//std::cout << std::endl;
-
+	propositionToCnf(clauses, proposition);
 	if(!RECORD_GRAPH)
 		squeezeVariableIds(clauses);
 	std::vector<BitClause> bitClauses;

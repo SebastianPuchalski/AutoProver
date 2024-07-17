@@ -135,6 +135,7 @@
     <ClCompile Include="..\src\ForwardChaining.cpp" />
     <ClCompile Include="..\src\ModelChecker.cpp" />
     <ClCompile Include="..\src\NaturalDeduction.cpp" />
+    <ClCompile Include="..\src\NormalForm.cpp" />
     <ClCompile Include="..\src\Proposition.cpp" />
     <ClCompile Include="..\src\Resolution.cpp" />
     <ClCompile Include="..\src\test\main.cpp">
@@ -151,6 +152,7 @@
     <ClInclude Include="..\src\ForwardChaining.hpp" />
     <ClInclude Include="..\src\ModelChecker.hpp" />
     <ClInclude Include="..\src\NaturalDeduction.hpp" />
+    <ClInclude Include="..\src\NormalForm.hpp" />
     <ClInclude Include="..\src\Proposition.hpp" />
     <ClInclude Include="..\src\Resolution.hpp" />
     <ClInclude Include="..\src\UnaryOperator.hpp" />
