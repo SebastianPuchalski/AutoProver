@@ -55,6 +55,7 @@ void cnfPropToVec(std::vector<Clause>& clauses, const PropositionSP& cnf) {
 	// if there is at least one empty clause then proposition is False
 }
 
+// removing redundant literals and clauses with complementary literals
 bool removeRedundancy(std::vector<Clause>& cnf) {
 	bool anyChange = false;
 	std::vector<Clause> newCnf;
@@ -90,8 +91,8 @@ bool removeRedundancy(std::vector<Clause>& cnf) {
 void propositionToCnf(Cnf& clauses, PropositionSP proposition) {
 	auto cnf = proposition->toCnf();
 	cnfPropToVec(clauses, cnf);
-	// removeRedundancy(clauses);
-	// clauses.shrink_to_fit();
+	removeRedundancy(clauses);
+	clauses.shrink_to_fit();
 }
 
 void squeezeVariableIds(Cnf& clauses) {

@@ -7,6 +7,8 @@
 #include "../Resolution.hpp"
 #include "../ForwardChaining.hpp"
 #include "../NaturalDeduction.hpp"
+#include "../NormalForm.hpp"
+#include "../CnfSat.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -17,11 +19,12 @@ using namespace std;
 
 const int NAME_STR_LENGTH = 32;
 const int RESULT_STR_LENGTH = 10;
+const int ADD_INFO_MAX_LENGTH = 78;
 
 void printTestHeader() {
 	cout << left << setw(NAME_STR_LENGTH) << "Name";
 	cout << left << setw(RESULT_STR_LENGTH) << "Result";
-	cout << "   Details" << endl;
+	cout << "Details" << endl;
 }
 
 void printTestItem(const string& name, bool pass, string addInfo = "") {
@@ -30,8 +33,14 @@ void printTestItem(const string& name, bool pass, string addInfo = "") {
 	cout << (pass ? "\033[32m" : "\033[31m") <<
 		left << setw(RESULT_STR_LENGTH) <<
 		(pass ? "PASS" : "FAIL") << "\033[0m";
-	if (!addInfo.empty())
-		cout << "   " << addInfo;
+	if (!addInfo.empty()) {
+		if (addInfo.length() > ADD_INFO_MAX_LENGTH) {
+			const std::string ellipsis = "...";
+			addInfo.resize(ADD_INFO_MAX_LENGTH - ellipsis.length());
+			addInfo += ellipsis;
+		}
+		cout << addInfo;
+	}
 	cout << endl;
 }
 
@@ -87,37 +96,15 @@ void testNaturalDeduction(vector<string> premises, string conclusion, ofstream& 
 		logFile << nd.getProofString() << endl;
 }
 
-//void testNaturalDeduction(vector<string> premises, string conclusion, ofstream& logFile) {
-//	Converter converter;
-//	NaturalDeduction nd;
-//	nd.addJasInferenceRules();
-//	for (auto& premise : premises) {
-//		auto p = converter.fromString(premise);
-//		if (Resolution::isValid(p)) {
-//			cout << "Valid: " << premise << endl;
-//			nd.addPremise(p);
-//		}
-//		else
-//			cout << "Invalid\n";
-//	}
-//	const int STEP_LIMIT = 10000;
-//	uint64_t i;
-//	for (i = 1; nd.step() && i < STEP_LIMIT; i++);
-//
-//	auto graph = nd.getFullGraph();
-//	cout << "Graph size: " << graph.size() << endl;
-//
-//	for (int i = 0; i < 10000 && logFile.is_open(); i++) {
-//		int idx = i * (graph.size() / 10000);
-//		auto prop = graph[idx].proposition;
-//		if (Resolution::isValid(prop)) {
-//			cout << converter.toString(graph[idx].proposition) << endl;
-//			logFile << converter.toString(graph[idx].proposition) << endl;
-//		}
-//		else
-//			cout << "Invalid generated proposition\n";
-//	}
-//}
+void testDpll(const string& proposition, bool satisfiable) {
+	Converter converter;
+	auto prop = converter.fromString(proposition);
+	Cnf cnf;
+	propositionToCnf(cnf, prop);
+	DpllCnfSat dpll(cnf);
+	bool pass = (satisfiable == dpll.isSatisfiable());
+	printTestItem("DPLL", pass, converter.toString(prop));
+}
 
 int main() {
 	printTestHeader();
@@ -139,9 +126,19 @@ int main() {
 	std::ofstream ndLogFile("natural deduction.log");
 	testNaturalDeduction({"p & s", "(p -> q) & (q -> r)", "(s & r) -> t"}, "t", ndLogFile);
 	testNaturalDeduction({"a", "a -> b", "b <-> c", "(c & a) -> f"}, "f", ndLogFile);
-	//testNaturalDeduction({ "p | ~p", "(a -> b) <-> (~b -> ~a)", "(p & q) -> p", "(x | y) <-> (~x -> y)", "(r -> s) | (s -> r)", "((a & b) -> c) <-> (a -> (b -> c))", "(d | e) -> (d -> e)", "(f & (g | h)) <-> ((f & g) | (f & h))", "(i -> (j -> k)) <-> ((i & j) -> k)", "(l | m) <-> ((l -> m) -> m)", "(n & o) | (n & ~o) | (~n & o) | (~n & ~o)", "(p -> q) <-> (~q -> ~p)", "(r | s) <-> ~(~r & ~s)", "(t -> (u -> v)) <-> ((t & u) -> v)", "(w & x) | (~w & ~x) | (w & ~x) | (~w & x)", "((p -> q) & (q -> r)) -> (p -> r)", "(a <-> b) <-> ((a -> b) & (b -> a))", "(c | d) <-> ~(~c & ~d)", "(e -> f) | (f -> e)", "(g & h) -> g", "(i | j) -> (i -> j)", "(k & l) <-> ~(~k | ~l)", "(m -> n) <-> (~m | n)", "(o & (p | q)) <-> ((o & p) | (o & q))", "(r -> (s -> t)) <-> ((r & s) -> t)", "(u | v) <-> ((u -> v) -> v)", "(w -> x) <-> (~w | x)", "(y & z) | (~y & ~z)", "(a -> b) -> ((b -> c) -> (a -> c))", "(d & e) -> (d <-> e)", "(f | g) <-> ~(~f & ~g)", "(h -> (i & j)) <-> ((h -> i) & (h -> j))", "(k | (l & m)) <-> ((k | l) & (k | m))", "(n -> o) <-> (~o -> ~n)", "(p & q) <-> ~(~p | ~q)", "(r -> s) <-> (~s -> ~r)", "(t | u) -> (t -> u)", "(v & (w -> x)) -> ((v & w) -> x)", "(y -> z) | (z -> y)", "(a & b) | (a & ~b) | (~a & b) | (~a & ~b)", "(c -> (d -> e)) <-> ((c & d) -> e)", "(f | g) <-> ((f -> g) -> g)", "(h & i) -> h", "(j -> k) <-> (~j | k)", "(l & (m | n)) <-> ((l & m) | (l & n))", "(o -> p) | (p -> o)", "(q & r) <-> ~(~q | ~r)", "(s -> (t & u)) <-> ((s -> t) & (s -> u))", "(v | w) <-> ~(~v & ~w)", "(x -> y) <-> (~y -> ~x)", "(z & (a | b)) -> ((z & a) | (z & b))", "(((g & h) -> g) | (((a & b) -> c) -> (a -> (b -> c)))) | ((~(~r & ~s) -> (r | s)) | ((j -> k) <-> (~j | k)))", "(((j -> k) <-> (~j | k)) | (~(~r & ~s) -> (r | s))) | (((~m | n) <-> (m -> n)) | ((w -> x) <-> (~w | x)))", "((~(~r & ~s) -> (r | s)) & ((j -> k) <-> (~j | k))) & (((p -> q) <-> (~q -> ~p)) | ((o -> p) | (p -> o)))", "(((~x -> y) <-> (x | y)) | ((~m | n) <-> (m -> n))) & ((~(~r & ~s) -> (r | s)) | ((j -> k) <-> (~j | k)))" }, "", ndLogFile);
 	//testNaturalDeduction({"(a <-> b) <-> c"}, "a <-> (b <->c)", ndLogFile); // it is taking too much time
 	ndLogFile.close();
+
+	testDpll("(a | ~b) <-> ((c & d) -> e)", true);
+	testDpll("(a & b & c) <-> ~(a & b & c)", false);
+	testDpll("((((m & n) | o) -> (p & ~q)) <-> (r | (s & (t -> u)))) & (~v | ((w <-> x) & (y | (~z & a))))", true);
+	testDpll("~(((a & ~b) | c) <-> (d -> (e & f)) <-> ((a & ~b) | c) <-> (d -> (e & f)))", false);
+	testDpll("(((a & ~b) -> (c | d)) <-> ((e & f) | (g -> ~h))) & (((i | j) <-> (k & l)) -> ((m & ~n) | (o -> p)))", true);
+	testDpll("~(((a | b | c) & (d | e | f) & (g | h | i) & (j | k | l) & (m | n | o)) <-> ~((~a & ~b & ~c) | (~d & ~e & ~f) | (~g & ~h & ~i) | (~j & ~k & ~l) | (~m & ~n & ~o)))", false);
+	testDpll("~((((x & y) -> z) <-> (a | (b & ~c))) & (((d -> e) | f) <-> ((g & h) -> (i | (j & ~k))))) & (((l & m) | ~n) -> ((o <-> p) | (q & r)))", true);
+	testDpll("~((((a & b & e) -> (c | d)) <-> (e | ~a)) & ((f -> (~g & h)) <-> (i | (j & ~k))) -> (((a & b) -> (c | d)) <-> (e | ~a)) & ((f -> (~g & h)) <-> (i | (j & ~k))))", false);
+	testDpll("a & b & c & d & e & f & g & h & i & j & k & l & m & n & o & p & q & r & s & t & u & v & w & x & y & z & a1 & b1 & c1 & d1 & e1 & f1 & g1 & h1 & i1 & j1 & k1 & l1 & m1 & n1 & o1 & p1 & q1 & r1 & s1 & t1 & u1 & v1 & w1 & x1 & y1 & z1", true);
+	testDpll("~((((a -> b) & (~b -> ~a) & (c <-> (d | e)) & (f <-> (g & h))) -> (((i | (j & k)) -> (l | (m & n))) & ((o & p) -> (q & (r | s))) & ((t | (u & v)) -> (w | (x & y))) & ((z & a) -> (b & (c | d))))) <-> (((a -> b) & (~b -> ~a) & (c <-> (d | e)) & (f <-> (g & h))) -> (((i | (j & k)) -> (l | (m & n))) & ((o & p) -> (q & (r | s))) & ((t | (u & v)) -> (w | (x & y))) & ((z & a) -> (b & (c | d))))))", false);
 
 	return 0;
 }

@@ -130,6 +130,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\BinaryOperator.cpp" />
+    <ClCompile Include="..\src\CnfSat.cpp" />
     <ClCompile Include="..\src\Constant.cpp" />
     <ClCompile Include="..\src\Converter.cpp" />
     <ClCompile Include="..\src\ForwardChaining.cpp" />
@@ -146,6 +147,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\BinaryOperator.hpp" />
+    <ClInclude Include="..\src\CnfSat.hpp" />
     <ClInclude Include="..\src\Common.hpp" />
     <ClInclude Include="..\src\Constant.hpp" />
     <ClInclude Include="..\src\Converter.hpp" />

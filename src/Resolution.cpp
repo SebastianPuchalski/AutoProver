@@ -17,6 +17,8 @@
 #include <chrono>
 //#include <bit>
 
+// TODO: This module requires refactoring (after optimizations?)!
+
 const bool RECORD_GRAPH = true;
 
 //size_t p_iter = 0;
@@ -209,7 +211,7 @@ bool clausesToBitClauses(std::vector<BitClause>& bitClauses, const Cnf& clauses)
 	return true;
 }
 
-bool resolve(std::set<BitClause>& currClauses, Graph& graph,
+bool resolve(std::set<BitClause>& unprocClauses, Graph& graph,
 	         const BucketBuff& procClauses, BitClause clause) {
 	for (int v = 0; v < BitClause::VARIABLE_COUNT; v++) {
 		const uint64_t mask = static_cast<uint64_t>(1) << v;
@@ -226,7 +228,7 @@ bool resolve(std::set<BitClause>& currClauses, Graph& graph,
 				newClause.nLiterals = procClause.nLiterals | maskedClause.nLiterals;
 				if ((newClause.pLiterals & newClause.nLiterals) == 0) {
 					//p_current++;
-					currClauses.insert(newClause);
+					unprocClauses.insert(newClause);
 					if (RECORD_GRAPH) {
 						(positive ? procClause.nLiterals : procClause.pLiterals) |= mask;
 						graph.emplace(newClause, ClausePair(procClause, clause));
@@ -243,19 +245,19 @@ bool resolve(std::set<BitClause>& currClauses, Graph& graph,
 bool resolve(Graph& graph, const std::vector<BitClause>& clauses) {
 	std::vector<BitClause> procClauses;
 	BucketBuff procClausesB;
-	std::set<BitClause> currClauses;
+	std::set<BitClause> unprocClauses;
 
 	for (auto clause : clauses) {
-		currClauses.insert(clause);
+		unprocClauses.insert(clause);
 		if (RECORD_GRAPH)
 			graph[clause] = ClausePair();
 	}
 
-	while (currClauses.size()) {
+	while (unprocClauses.size()) {
 		//p_iter++;
-		auto it = currClauses.begin();
+		auto it = unprocClauses.begin();
 		BitClause clause = *it;
-		currClauses.erase(it);
+		unprocClauses.erase(it);
 
 		bool add = true;
 		for (int i = 0; i < procClauses.size(); i++) {
@@ -277,7 +279,7 @@ bool resolve(Graph& graph, const std::vector<BitClause>& clauses) {
 					i--;
 				}
 			}
-			if (resolve(currClauses, graph, procClausesB, clause))
+			if (resolve(unprocClauses, graph, procClausesB, clause))
 				return true;
 			procClausesB.addClause(clause);
 			procClauses.push_back(clause);

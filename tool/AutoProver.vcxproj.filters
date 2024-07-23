@@ -51,6 +51,9 @@
     <ClCompile Include="..\src\NormalForm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CnfSat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\BinaryOperator.hpp">
@@ -87,6 +90,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\NormalForm.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CnfSat.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

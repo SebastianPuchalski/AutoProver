@@ -7,6 +7,7 @@
 #include "../Resolution.hpp"
 #include "../ForwardChaining.hpp"
 #include "../NaturalDeduction.hpp"
+#include "../CnfSat.hpp"
 
 #include <iostream>
 
@@ -42,48 +43,66 @@ void printConverterSettings(const Converter& converter) {
 	cout << "Parenthesis: " << openingParenthesis << " " << closingParenthesis << endl;
 }
 
+void modelChecking(PropositionSP proposition) {
+	cout << "Model checking: ";
+	vector<int> variableIds;
+	proposition->getVariableIds(variableIds);
+	const int VARIABLE_NUMBER_THRESHOLD = 30;
+	bool isValid;
+	bool isContradiction;
+	if (variableIds.size() <= VARIABLE_NUMBER_THRESHOLD) {
+		NaiveModelChecker checker;
+		isValid = checker.isValid(proposition);
+		isContradiction = checker.isContradiction(proposition);
+	}
+	else {
+		isValid = DpllCnfSat::isPropValid(proposition);
+		isContradiction = DpllCnfSat::isPropContradiction(proposition);
+	}
+	if (isValid)
+		cout << "valid";
+	else if (isContradiction)
+		cout << "contradiction";
+	else
+		cout << "contingent";
+	cout << endl;
+}
+
+void resolution(PropositionSP proposition) {
+	string proofString;
+	bool valid = Resolution::isValid(proposition, &proofString);
+	cout << "Resolution: ";
+	cout << (valid ? "valid" : "not valid");
+	cout << "\n\n";
+	cout << proofString;
+}
+
 int main() {
 	Converter converter;
-	converter.skipParenthesisIfBinOpIsAssociative(false);
+	//converter.skipParenthesisIfBinOpIsAssociative(false);
 	printConverterSettings(converter);
 	cout << endl;
 
-	while (true) {
+	bool work = true;
+	while (work) {
 		string str;
 		getline(cin, str);
-		shared_ptr<Proposition> proposition = converter.fromString(str);
-
-		if (proposition) {
-			cout << "Model checking: ";
-			vector<int> variableIds;
-			proposition->getVariableIds(variableIds);
-			const int MAX_VARIABLE_NUMBER = 34; // it is too slow for large number of variables
-			if (variableIds.size() <= MAX_VARIABLE_NUMBER) {
-				NaiveModelChecker checker;
-				bool isTautology = checker.isValid(proposition);
-				bool isContradiction = checker.isContradiction(proposition);
-				if (isTautology)
-					cout << "valid";
-				else if (isContradiction)
-					cout << "contradiction";
-				else
-					cout << "contingent proposition";
-			}
-			else
-				cout << "too many variables";
-			cout << endl;
-
-			string proofString;
-			bool valid = Resolution::isValid(proposition, &proofString);
-			cout << "Resolution: ";
-			cout << (valid ? "valid" : "not valid");
-			cout << "\n\n";
-			cout << proofString;
+		if (str.empty())
+			continue;
+		if (str[0] == ';') {
+			if (str == ";exit")
+				work = false;
 		}
 		else {
-			cout << "Error during parsing!\n";
+			PropositionSP proposition = converter.fromString(str);
+			if (proposition) {
+				modelChecking(proposition);
+				resolution(proposition);
+			}
+			else
+				cout << "Error during parsing!\n";
+			cout << endl;
 		}
-		cout << endl;
 	}
 	return 0;
 }
