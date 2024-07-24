@@ -5,12 +5,13 @@
 class DpllCnfSat {
 public:
 	DpllCnfSat(const Cnf& cnf);
-	virtual ~DpllCnfSat();
+	~DpllCnfSat() = default;
 
 	bool isSatisfiable();
 
 	static bool isPropValid(const PropositionSP& proposition);
 	static bool isPropContradiction(const PropositionSP& proposition);
+	std::vector<bool> getModel() const; // squeezed variable ids
 
 private:
 	Cnf clauses;
@@ -22,3 +23,17 @@ private:
 	bool dpll(VariableId id, bool value);
 };
 
+class WalkSat {
+public:
+	WalkSat(const Cnf& cnf);
+	~WalkSat() = default;
+
+	// isSatisfiable returns true if satisfiable and false if probably not
+	bool isSatisfiable(int maxFlipNumber = 1000, float p = 0.5f);
+	std::vector<bool> getModel() const; // squeezed variable ids
+
+private:
+	Cnf clauses;
+	std::vector<bool> model;
+	std::vector<Clause*> falseClauses;
+};

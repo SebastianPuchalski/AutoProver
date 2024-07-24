@@ -3,6 +3,7 @@
 #include "UnaryOperator.hpp"
 
 #include <cassert>
+#include <random>
 
 DpllCnfSat::DpllCnfSat(const Cnf& cnf) : clauses(cnf) {
 	squeezeVariableIds(clauses);
@@ -18,8 +19,6 @@ DpllCnfSat::DpllCnfSat(const Cnf& cnf) : clauses(cnf) {
 		positiveLiteralCount.resize(variableCount);
 	}
 }
-
-DpllCnfSat::~DpllCnfSat() {}
 
 bool DpllCnfSat::isSatisfiable() {
 	if (clauses.empty())
@@ -128,6 +127,10 @@ bool DpllCnfSat::dpll(VariableId id, bool value) {
 	return result;
 }
 
+std::vector<bool> DpllCnfSat::getModel() const {
+	return variableValues;
+}
+
 bool DpllCnfSat::isPropValid(const PropositionSP& proposition) {
 	auto notProposition = std::make_shared<UnaryOperator>(proposition, UnaryOperator::NOT);
 	return isPropContradiction(notProposition);
@@ -138,4 +141,91 @@ bool DpllCnfSat::isPropContradiction(const PropositionSP& proposition) {
 	propositionToCnf(clauses, proposition);
 	DpllCnfSat dpll(clauses);
 	return !dpll.isSatisfiable();
+}
+
+WalkSat::WalkSat(const Cnf& cnf) : clauses(cnf) {
+	squeezeVariableIds(clauses);
+	clauses.shrink_to_fit();
+	int variableCount = 0;
+	for (auto& clause : clauses)
+		for (auto& literal : clause)
+			variableCount = std::max(literal.first + 1, variableCount);
+	if (variableCount > 0) {
+		model.resize(variableCount);
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dist(0, 1);
+		for (int i = 0; i < model.size(); i++)
+			model[i] = dist(gen);
+	}
+}
+
+bool WalkSat::isSatisfiable(int maxFlipNumber, float randWalkP) {
+	if (clauses.empty())
+		return true;
+	for (auto& clause : clauses)
+		if (clause.empty())
+			return false;
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> iDist(0, clauses.size() + model.size());
+	std::uniform_real_distribution<float> fDist(0.f, 1.f);
+
+	for (int i = 0; i < maxFlipNumber; i++) {
+		falseClauses.clear();
+		bool trueSentence = true;
+		for (auto& clause : clauses) {
+			bool trueClause = false;
+			for (auto& literal : clause) {
+				if (model[literal.first] != literal.second) {
+					trueClause = true;
+					break;
+				}
+			}
+			if (!trueClause) {
+				trueSentence = false;
+				falseClauses.push_back(&clause);
+				break;
+			}
+		}
+		if (trueSentence)
+			return true;
+
+		VariableId variableToflip;
+		int randFalseClauseIdx = iDist(gen) % falseClauses.size();
+		Clause& randFalseClause = *falseClauses[randFalseClauseIdx];
+		if (fDist(gen) < randWalkP) {
+			int randLiteralIdx = iDist(gen) % randFalseClause.size();
+			variableToflip = randFalseClause[randLiteralIdx].first;
+		}
+		else {
+			int bestTrueClauseCount = -1;
+			for (auto& literal : randFalseClause) {
+				VariableId id = literal.first;
+				model[id] = !model[id];
+				int trueClauseCount = 0;
+				for (auto& clause : clauses) {
+					for (auto& literal : clause) {
+						if (model[literal.first] != literal.second) {
+							trueClauseCount++;
+							break;
+						}
+					}
+				}
+				model[id] = !model[id];
+				if (trueClauseCount > bestTrueClauseCount) {
+					variableToflip = id;
+					bestTrueClauseCount = trueClauseCount;
+				}
+			}
+			assert(bestTrueClauseCount > -1);
+		}
+		model[variableToflip] = !model[variableToflip];
+	}
+	return false;
+}
+
+std::vector<bool> WalkSat::getModel() const {
+	return model;
 }
