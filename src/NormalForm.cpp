@@ -17,7 +17,7 @@ bool traverseLiteral(std::vector<Literal>& literals, const PropositionSP& litera
 	}
 	else if (literal->getType() == Proposition::CONSTANT) {
 		auto constant = std::static_pointer_cast<Constant>(literal);
-		return constant->getValue() == negation; // remove clause if literal equals True
+		return static_cast<bool>(constant->getValue()) == negation; // remove clause if literal equals True
 	}
 	else if (literal->getType() == Proposition::VARIABLE) {
 		auto variable = std::static_pointer_cast<Variable>(literal);
@@ -67,8 +67,8 @@ bool removeRedundancy(std::vector<Clause>& cnf) {
 			auto literal = clause[i];
 			bool removeLiteral = false;
 			for (int j = 0; j < i; j++) {
-				if (literal.first == clause[j].first) {
-					if (clause[i].second != clause[j].second) {
+				if (literal.varId == clause[j].varId) {
+					if (clause[i].neg != clause[j].neg) {
 						removeClause = anyChange = true;
 						i = j = clause.size();
 					}
@@ -95,11 +95,44 @@ void propositionToCnf(Cnf& clauses, PropositionSP proposition) {
 	clauses.shrink_to_fit();
 }
 
+PropositionSP clauseToProposition(const Clause& clause) {
+	if (clause.empty())
+		return std::make_shared<Constant>(Constant::FALSE);
+	if (clause.size() == 1) {
+		auto& literal = clause.front();
+		PropositionSP result = std::make_shared<Variable>(literal.varId);
+		if(literal.neg)
+			result = std::make_shared<UnaryOperator>(result, UnaryOperator::NOT);
+		return result;
+	}
+
+	int middle = clause.size() / 2;
+	Clause part1(clause.begin(), clause.begin() + middle);
+	Clause part2(clause.begin() + middle, clause.end());
+	auto prop1 = clauseToProposition(part1);
+	auto prop2 = clauseToProposition(part2);
+	return std::make_shared<BinaryOperator>(prop1, BinaryOperator::OR, prop2);
+}
+
+PropositionSP cnfToProposition(const Cnf& clauses) {
+	if(clauses.empty())
+		return std::make_shared<Constant>(Constant::TRUE);
+	if (clauses.size() == 1)
+		return clauseToProposition(clauses.front());
+
+	int middle = clauses.size() / 2;
+	Cnf part1(clauses.begin(), clauses.begin() + middle);
+	Cnf part2(clauses.begin() + middle, clauses.end());
+	auto prop1 = cnfToProposition(part1);
+	auto prop2 = cnfToProposition(part2);
+	return std::make_shared<BinaryOperator>(prop1, BinaryOperator::AND, prop2);
+}
+
 void squeezeVariableIds(Cnf& clauses) {
 	std::map<VariableId, VariableId> map;
 	for (auto& clause : clauses)
 		for (auto& literal : clause)
-			map[literal.first] = 0;
+			map[literal.varId] = 0;
 
 	VariableId newId = 0;
 	for (auto& pair : map)
@@ -107,5 +140,5 @@ void squeezeVariableIds(Cnf& clauses) {
 
 	for (auto& clause : clauses)
 		for (auto& literal : clause)
-			literal.first = map[literal.first];
+			literal.varId = map[literal.varId];
 }

@@ -181,10 +181,10 @@ bool clausesToBitClauses(std::vector<BitClause>& bitClauses, const Cnf& clauses)
 	for (auto& clause : clauses) {
 		BitClause newClause;
 		for (auto& literal : clause) {
-			if (literal.first >= sizeof(uint64_t) * 8)
+			if (literal.varId >= sizeof(uint64_t) * 8)
 				return false;
-			uint64_t mask = static_cast<uint64_t>(1) << literal.first;
-			if (literal.second)
+			uint64_t mask = static_cast<uint64_t>(1) << literal.varId;
+			if (literal.neg)
 				newClause.nLiterals |= mask;
 			else
 				newClause.pLiterals |= mask;
@@ -303,7 +303,7 @@ int traverseProof(Proof& proof, const Graph& graph, BitClause clause = BitClause
 		item.index2 = traverseProof(proof, graph, pair.second);
 	}
 	proof.push_back(item);
-	return proof.size() - 1;
+	return static_cast<int>(proof.size() - 1);
 }
 
 std::string getVariableName(VariableId id) {

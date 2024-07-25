@@ -11,7 +11,7 @@ DpllCnfSat::DpllCnfSat(const Cnf& cnf) : clauses(cnf) {
 	int variableCount = 0;
 	for (auto& clause : clauses)
 		for (auto& literal : clause)
-			variableCount = std::max(literal.first + 1, variableCount);
+			variableCount = std::max(literal.varId + 1, variableCount);
 	if (variableCount > 0) {
 		variableAssigned.resize(variableCount);
 		variableValues.resize(variableCount);
@@ -52,9 +52,9 @@ bool DpllCnfSat::dpll(VariableId id, bool value) {
 		VariableId lastLiteralVarId;
 		bool lastLiteralNeg;
 		for (auto& literal : clause) {
-			VariableId id = literal.first;
+			VariableId id = literal.varId;
 			if (variableAssigned[id]) {
-				if (variableValues[id] != literal.second) {
+				if (variableValues[id] != literal.neg) {
 					falseClause = false;
 					trueClause = true;
 					break;
@@ -63,15 +63,15 @@ bool DpllCnfSat::dpll(VariableId id, bool value) {
 			else {
 				falseClause = false;
 				literalCount++;
-				lastLiteralVarId = literal.first;
-				lastLiteralNeg = literal.second;
+				lastLiteralVarId = literal.varId;
+				lastLiteralNeg = literal.neg;
 			}
 		}
 		if (!falseClause && !trueClause) {
 			for (auto& literal : clause) {
-				VariableId id = literal.first;
+				VariableId id = literal.varId;
 				if (!variableAssigned[id]) {
-					if (literal.second)
+					if (literal.neg)
 						negativeLiteralCount[id]++;
 					else
 						positiveLiteralCount[id]++;
@@ -149,7 +149,7 @@ WalkSat::WalkSat(const Cnf& cnf) : clauses(cnf) {
 	int variableCount = 0;
 	for (auto& clause : clauses)
 		for (auto& literal : clause)
-			variableCount = std::max(literal.first + 1, variableCount);
+			variableCount = std::max(literal.varId + 1, variableCount);
 	if (variableCount > 0) {
 		model.resize(variableCount);
 		std::random_device rd;
@@ -169,7 +169,8 @@ bool WalkSat::isSatisfiable(int maxFlipNumber, float randWalkP) {
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> iDist(0, clauses.size() + model.size());
+	const int maxValue = static_cast<int>(clauses.size() + model.size());
+	std::uniform_int_distribution<> iDist(0, maxValue);
 	std::uniform_real_distribution<float> fDist(0.f, 1.f);
 
 	for (int i = 0; i < maxFlipNumber; i++) {
@@ -178,7 +179,7 @@ bool WalkSat::isSatisfiable(int maxFlipNumber, float randWalkP) {
 		for (auto& clause : clauses) {
 			bool trueClause = false;
 			for (auto& literal : clause) {
-				if (model[literal.first] != literal.second) {
+				if (model[literal.varId] != literal.neg) {
 					trueClause = true;
 					break;
 				}
@@ -192,22 +193,22 @@ bool WalkSat::isSatisfiable(int maxFlipNumber, float randWalkP) {
 		if (trueSentence)
 			return true;
 
-		VariableId variableToflip;
+		VariableId variableToflip = -1;
 		int randFalseClauseIdx = iDist(gen) % falseClauses.size();
 		Clause& randFalseClause = *falseClauses[randFalseClauseIdx];
 		if (fDist(gen) < randWalkP) {
 			int randLiteralIdx = iDist(gen) % randFalseClause.size();
-			variableToflip = randFalseClause[randLiteralIdx].first;
+			variableToflip = randFalseClause[randLiteralIdx].varId;
 		}
 		else {
 			int bestTrueClauseCount = -1;
 			for (auto& literal : randFalseClause) {
-				VariableId id = literal.first;
+				VariableId id = literal.varId;
 				model[id] = !model[id];
 				int trueClauseCount = 0;
 				for (auto& clause : clauses) {
 					for (auto& literal : clause) {
-						if (model[literal.first] != literal.second) {
+						if (model[literal.varId] != literal.neg) {
 							trueClauseCount++;
 							break;
 						}
@@ -219,8 +220,8 @@ bool WalkSat::isSatisfiable(int maxFlipNumber, float randWalkP) {
 					bestTrueClauseCount = trueClauseCount;
 				}
 			}
-			assert(bestTrueClauseCount > -1);
 		}
+		assert(variableToflip > -1);
 		model[variableToflip] = !model[variableToflip];
 	}
 	return false;

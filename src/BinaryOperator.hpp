@@ -15,7 +15,7 @@ public:
     0110: XOR
     0111: OR
     1000: NOR
-    1001: XNOR
+    1001: XNOR, A <-> B
     1010: NB, ~B
     1011: RIMP, B -> A
     1100: NA, ~A
