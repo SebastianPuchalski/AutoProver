@@ -66,6 +66,17 @@ void testResolution(const string& proposition, bool valid, ofstream& logFile) {
 		logFile << proofString << endl;
 }
 
+void testResolutionGen(int literalNum, int clauseNum, int variableNum, ofstream& logFile, unsigned seed = 87372914) {
+	Cnf clauses;
+	std::mt19937 gen(seed);
+	generateCnf(clauses, literalNum, clauseNum, variableNum, gen);
+	auto prop = cnfToProposition(clauses);
+	prop = std::make_shared<UnaryOperator>(prop, UnaryOperator::NOT);
+	Converter converter;
+	NaiveModelChecker checker;
+	testResolution(converter.toString(prop), checker.isValid(prop), logFile);
+}
+
 void testForwardChaining() {
 	ForwardChainingKB kb;
 	kb.addFact(1);
@@ -156,7 +167,6 @@ void testCnf(const string& proposition) {
 	Cnf cnf;
 	propositionToCnf(cnf, propRef);
 	auto prop = cnfToProposition(cnf);
-
 	auto equivalence = std::make_shared<BinaryOperator>(propRef, BinaryOperator::XNOR, prop);
 	NaiveModelChecker checker;
 	bool pass = checker.isValid(equivalence);
@@ -176,6 +186,11 @@ int main() {
 	testResolution("((a & ~b) | c) <-> (d -> (e & f)) <-> ((a & ~b) | c) <-> (d -> (e & f))", true, resLogFile);
 	testResolution("(a & b & c) <-> ~(a & b & c)", false, resLogFile);
 	testResolution("~(((p -> q) & (r | ~s)) <-> ((t <-> u) | (v & (w -> ~x)))) & ((y & z) -> (a | (b <-> ~c)))", false, resLogFile);
+	{
+		const int VAR_NUMBER = 22;
+		for (int ratio = 2; ratio <= 8; ratio++)
+			testResolutionGen(3, VAR_NUMBER * ratio, VAR_NUMBER, resLogFile, 5734579 + ratio);
+	}
 	resLogFile.close();
 
 	testForwardChaining();

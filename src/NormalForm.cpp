@@ -128,6 +128,37 @@ PropositionSP cnfToProposition(const Cnf& clauses) {
 	return std::make_shared<BinaryOperator>(prop1, BinaryOperator::AND, prop2);
 }
 
+void generateClause(Clause& clause, int literalNum, int variableNum, std::mt19937& gen) {
+	std::uniform_int_distribution<> varDist(0, variableNum - 1);
+	std::uniform_real_distribution<float> negDist(0.f, 1.f);
+
+	for (int i = 0; i < literalNum; i++) {
+		Literal literal(varDist(gen), negDist(gen) > 0.5f);
+		clause.push_back(literal);
+	}
+}
+
+void generateClause(Clause& clause, int literalNum, int variableNum) {
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	generateClause(clause, literalNum, variableNum, gen);
+}
+
+void generateCnf(Cnf& clauses, int literalNum, int clauseNum, int variableNum, std::mt19937& gen) {
+	clauses.clear();
+	for (int i = 0; i < clauseNum; i++) {
+		Clause clause;
+		generateClause(clause, literalNum, variableNum, gen);
+		clauses.push_back(clause);
+	}
+}
+
+void generateCnf(Cnf& clauses, int literalNum, int clauseNum, int variableNum) {
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	generateCnf(clauses, literalNum, clauseNum, variableNum, gen);
+}
+
 void squeezeVariableIds(Cnf& clauses) {
 	std::map<VariableId, VariableId> map;
 	for (auto& clause : clauses)
