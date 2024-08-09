@@ -9,6 +9,7 @@
 #include "../NaturalDeduction.hpp"
 #include "../NormalForm.hpp"
 #include "../CnfSat.hpp"
+#include "../LogicCircuit.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -173,6 +174,50 @@ void testCnf(const string& proposition) {
 	printTestItem("Cnf conversions", pass, converter.toString(prop));
 }
 
+void testLogicCircuit() {
+	LogicCircuit lc;
+	lc.setFcArch({4, 2, 1});
+	std::vector<LogicCircuit::DataSample> data;
+	data.push_back(LogicCircuit::DataSample({ 0, 0, 0, 0 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 0, 0, 0, 1 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 0, 0, 1, 0 }, { 1 }));
+	data.push_back(LogicCircuit::DataSample({ 0, 0, 1, 1 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 0, 1, 0, 0 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 0, 1, 0, 1 }, { 1 }));
+	data.push_back(LogicCircuit::DataSample({ 0, 1, 1, 0 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 0, 1, 1, 1 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 1, 0, 0, 0 }, { 1 }));
+	data.push_back(LogicCircuit::DataSample({ 1, 0, 0, 1 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 1, 0, 1, 0 }, { 0 }));
+	//data.push_back(LogicCircuit::DataSample({ 1, 0, 1, 1 }, { 1 }));
+	//data.push_back(LogicCircuit::DataSample({ 1, 1, 0, 0 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 1, 1, 0, 1 }, { 0 }));
+	data.push_back(LogicCircuit::DataSample({ 1, 1, 1, 0 }, { 1 }));
+	data.push_back(LogicCircuit::DataSample({ 1, 1, 1, 1 }, { 0 }));
+	Cnf cnf;
+	lc.getTrainCnf(cnf, data);
+	WalkSat walkSat(cnf);
+	bool result = walkSat.isSatisfiable(10000000);
+	/*DpllCnfSat dpll(cnf);
+	bool result = dpll.isSatisfiable();*/
+	bool pass = false;
+	if (result) {
+		auto model = walkSat.getModel();
+		lc.setTrainModel(model);
+		pass = true;
+		data.push_back(LogicCircuit::DataSample({ 1, 0, 1, 1 }, { 1 }));
+		data.push_back(LogicCircuit::DataSample({ 1, 1, 0, 0 }, { 0 }));
+		for (auto& sample : data) {
+			auto output = lc.infer(sample.input);
+			if (output != sample.output) {
+				pass = false;
+				break;
+			}
+		}
+	}
+	printTestItem("Logic Circuit", pass);
+}
+
 int main() {
 	printTestHeader();
 
@@ -224,6 +269,8 @@ int main() {
 	testCnf("((a & ~b) | c) <-> (d -> (e & f)) <-> ((a & ~b) | c) <-> (d -> (e & f))");
 	testCnf("~(((a & ~b) | c) <-> (d -> (e & f)) <-> ((a & ~b) | c) <-> (d -> (e & f)))");
 	testCnf("((((m & n) | o) -> (p & ~q)) <-> (r | (s & (t -> u)))) & (~v | ((w <-> x) & (y | (~z & a))))");
+
+	testLogicCircuit();
 
 	return 0;
 }
