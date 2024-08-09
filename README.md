@@ -12,6 +12,7 @@ At the moment, the project consists of:
 - Very efficient implementation of the Resolution method with proof generation
 - Forward Chaining based on Horn clauses in the form of an updatable knowledge base
 - Implementation of the Natural Deduction alike method with proof generation
+- Learning logic circuits from data using SAT solvers
 
 Natural deduction example:
 ```
