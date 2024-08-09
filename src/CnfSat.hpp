@@ -29,7 +29,7 @@ public:
 	~WalkSat() = default;
 
 	// isSatisfiable returns true if satisfiable and false if probably not
-	bool isSatisfiable(int maxFlipNumber = 1000, float p = 0.5f);
+	bool isSatisfiable(uint64_t maxFlipNumber = 1000, float p = 0.5f);
 	std::vector<bool> getModel() const; // squeezed variable ids
 
 private:

@@ -15,6 +15,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <functional>
 
 using namespace std;
 
@@ -174,48 +175,81 @@ void testCnf(const string& proposition) {
 	printTestItem("Cnf conversions", pass, converter.toString(prop));
 }
 
-void testLogicCircuit() {
+void testLogicCircuit(vector<int> archConf, int trainDatasetSize, int testDatasetSize,
+	                  const function<void(LogicCircuit::BitSequence&, LogicCircuit::BitSequence)>& func) {
+	const string TEST_NAME = "Logic Circuit";
+	const bool UNIQUE_DATASET = true;
+
+	unsigned int seed = 8753495341;
+	std::mt19937 gen(seed);
+	std::bernoulli_distribution bDist(0.5);
+
 	LogicCircuit lc;
-	lc.setFcArch({4, 2, 1});
-	std::vector<LogicCircuit::DataSample> data;
-	data.push_back(LogicCircuit::DataSample({ 0, 0, 0, 0 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 0, 0, 0, 1 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 0, 0, 1, 0 }, { 1 }));
-	data.push_back(LogicCircuit::DataSample({ 0, 0, 1, 1 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 0, 1, 0, 0 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 0, 1, 0, 1 }, { 1 }));
-	data.push_back(LogicCircuit::DataSample({ 0, 1, 1, 0 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 0, 1, 1, 1 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 1, 0, 0, 0 }, { 1 }));
-	data.push_back(LogicCircuit::DataSample({ 1, 0, 0, 1 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 1, 0, 1, 0 }, { 0 }));
-	//data.push_back(LogicCircuit::DataSample({ 1, 0, 1, 1 }, { 1 }));
-	//data.push_back(LogicCircuit::DataSample({ 1, 1, 0, 0 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 1, 1, 0, 1 }, { 0 }));
-	data.push_back(LogicCircuit::DataSample({ 1, 1, 1, 0 }, { 1 }));
-	data.push_back(LogicCircuit::DataSample({ 1, 1, 1, 1 }, { 0 }));
+	lc.setFcArch(archConf);
+
+	int datasetSize = trainDatasetSize + testDatasetSize;
+	if (datasetSize > (1 << archConf.front())) {
+		printTestItem(TEST_NAME, false, "Dataset size is too large");
+		assert(0);
+		return;
+	}
+	LogicCircuit::DataSample sample;
+	sample.input.resize(archConf.front());
+	sample.output.resize(archConf.back());
+	vector<LogicCircuit::DataSample> dataset;
+	while(dataset.size() < datasetSize) {
+		for (int i = 0; i < sample.input.size(); i++)
+			sample.input[i] = bDist(gen);
+		bool unique = true;
+		if (UNIQUE_DATASET) {
+			for (int i = 0; i < dataset.size(); i++) {
+				if (dataset[i].input == sample.input) {
+					unique = false;
+					break;
+				}
+			}
+		}
+		if (unique) {
+			func(sample.output, sample.input);
+			dataset.push_back(sample);
+		}
+	}
+	vector<LogicCircuit::DataSample> trainDataset(dataset.begin(), dataset.begin() + trainDatasetSize);
+	vector<LogicCircuit::DataSample> testDataset(dataset.begin() + trainDatasetSize, dataset.end());
+
 	Cnf cnf;
-	lc.getTrainCnf(cnf, data);
+	lc.getTrainCnf(cnf, trainDataset);
 	WalkSat walkSat(cnf);
-	bool result = walkSat.isSatisfiable(10000000);
-	/*DpllCnfSat dpll(cnf);
-	bool result = dpll.isSatisfiable();*/
+	bool result = walkSat.isSatisfiable(10000000000, 0.6);
+
+	int testPassCount = 0;
 	bool pass = false;
 	if (result) {
 		auto model = walkSat.getModel();
 		lc.setTrainModel(model);
+
 		pass = true;
-		data.push_back(LogicCircuit::DataSample({ 1, 0, 1, 1 }, { 1 }));
-		data.push_back(LogicCircuit::DataSample({ 1, 1, 0, 0 }, { 0 }));
-		for (auto& sample : data) {
+		for (auto& sample : trainDataset) {
 			auto output = lc.infer(sample.input);
 			if (output != sample.output) {
 				pass = false;
 				break;
 			}
 		}
+
+		if (pass) {
+			for (auto& sample : testDataset) {
+				auto output = lc.infer(sample.input);
+				if (output == sample.output)
+					testPassCount++;
+			}
+		}
 	}
-	printTestItem("Logic Circuit", pass);
+	float testPassRatio = static_cast<float>(testPassCount) / testDataset.size();
+	string addInfo = "Generalization: ";
+	addInfo += std::to_string(static_cast<int>(testPassRatio * 100 + 0.5f));
+	addInfo += "% of the cases from the test dataset passed";
+	printTestItem(TEST_NAME, pass, addInfo);
 }
 
 int main() {
@@ -270,7 +304,14 @@ int main() {
 	testCnf("~(((a & ~b) | c) <-> (d -> (e & f)) <-> ((a & ~b) | c) <-> (d -> (e & f)))");
 	testCnf("((((m & n) | o) -> (p & ~q)) <-> (r | (s & (t -> u)))) & (~v | ((w <-> x) & (y | (~z & a))))");
 
-	testLogicCircuit();
+	auto lcFunc = [](LogicCircuit::BitSequence& output, LogicCircuit::BitSequence input) {
+		int in = 0;
+		for (int i = 0; i < input.size(); i++)
+			if (input[i])
+				in |= 1 << i;
+		output[0] = (in % 3) == 2;
+	};
+	testLogicCircuit({ 4, 2, 1 }, 12, 4, lcFunc);
 
 	return 0;
 }

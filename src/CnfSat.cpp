@@ -160,7 +160,7 @@ WalkSat::WalkSat(const Cnf& cnf) : clauses(cnf) {
 	}
 }
 
-bool WalkSat::isSatisfiable(int maxFlipNumber, float randWalkP) {
+bool WalkSat::isSatisfiable(uint64_t maxFlipNumber, float randWalkP) {
 	if (clauses.empty())
 		return true;
 	for (auto& clause : clauses)
@@ -173,7 +173,7 @@ bool WalkSat::isSatisfiable(int maxFlipNumber, float randWalkP) {
 	std::uniform_int_distribution<> iDist(0, maxValue);
 	std::uniform_real_distribution<float> fDist(0.f, 1.f);
 
-	for (int i = 0; i < maxFlipNumber; i++) {
+	for (uint64_t i = 0; i < maxFlipNumber; i++) {
 		falseClauses.clear();
 		bool trueSentence = true;
 		for (auto& clause : clauses) {
