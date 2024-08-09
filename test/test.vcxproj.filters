@@ -57,6 +57,9 @@
     <ClCompile Include="..\src\LogicCircuit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\third_party\minisat\minisat\core\Solver.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\BinaryOperator.hpp">

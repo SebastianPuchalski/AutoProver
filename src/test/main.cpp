@@ -11,6 +11,7 @@
 #include "../CnfSat.hpp"
 #include "../LogicCircuit.hpp"
 
+#include "minisat/core/Solver.h"
 #include <cassert>
 #include <iostream>
 #include <iomanip>
@@ -175,6 +176,32 @@ void testCnf(const string& proposition) {
 	printTestItem("Cnf conversions", pass, converter.toString(prop));
 }
 
+LogicCircuit::BitSequence solveCnfWithMinisat(const Cnf& cnf) {
+	Minisat::Solver solver;
+	std::vector<Minisat::Var> minisatVariables;
+	for (const auto& clause : cnf) {
+		Minisat::vec<Minisat::Lit> minisatClause;
+		for (const auto& literal : clause) {
+			if (literal.varId >= minisatVariables.size())
+				minisatVariables.resize(literal.varId + 1, Minisat::var_Undef);
+			if (minisatVariables[literal.varId] == Minisat::var_Undef)
+				minisatVariables[literal.varId] = solver.newVar();
+			Minisat::Lit minisatLiteral = Minisat::mkLit(minisatVariables[literal.varId], literal.neg);
+			minisatClause.push(minisatLiteral);
+		}
+		solver.addClause(minisatClause);
+	}
+
+	bool result = solver.solve();
+	LogicCircuit::BitSequence model;
+	if (result) {
+		model.resize(minisatVariables.size());
+		for (size_t i = 0; i < minisatVariables.size(); i++)
+			model[i] = (solver.modelValue(minisatVariables[i]) == Minisat::l_True);
+	}
+	return model;
+}
+
 void testLogicCircuit(vector<int> archConf, int trainDatasetSize, int testDatasetSize,
 	                  const function<void(LogicCircuit::BitSequence&, LogicCircuit::BitSequence)>& func) {
 	const string TEST_NAME = "Logic Circuit";
@@ -219,15 +246,12 @@ void testLogicCircuit(vector<int> archConf, int trainDatasetSize, int testDatase
 
 	Cnf cnf;
 	lc.getTrainCnf(cnf, trainDataset);
-	WalkSat walkSat(cnf);
-	bool result = walkSat.isSatisfiable(10000000000, 0.6);
+	auto model = solveCnfWithMinisat(cnf);
 
 	int testPassCount = 0;
 	bool pass = false;
-	if (result) {
-		auto model = walkSat.getModel();
+	if (!model.empty()) {
 		lc.setTrainModel(model);
-
 		pass = true;
 		for (auto& sample : trainDataset) {
 			auto output = lc.infer(sample.input);
@@ -236,7 +260,6 @@ void testLogicCircuit(vector<int> archConf, int trainDatasetSize, int testDatase
 				break;
 			}
 		}
-
 		if (pass) {
 			for (auto& sample : testDataset) {
 				auto output = lc.infer(sample.input);
@@ -309,9 +332,9 @@ int main() {
 		for (int i = 0; i < input.size(); i++)
 			if (input[i])
 				in |= 1 << i;
-		output[0] = (in % 3) == 2;
+		output[0] = (in % 5) == 4;
 	};
-	testLogicCircuit({ 4, 2, 1 }, 12, 4, lcFunc);
+	testLogicCircuit({ 8, 4, 4, 2, 1 }, 60, 100, lcFunc);
 
 	return 0;
 }
